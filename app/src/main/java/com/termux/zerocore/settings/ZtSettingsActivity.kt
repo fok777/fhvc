@@ -7,7 +7,7 @@ import com.example.xh_lib.utils.UUtils
 import com.termux.R
 import com.termux.app.activities.SettingsActivity
 import com.termux.zerocore.ai.activity.MainAiSettings
-import com.termux.zerocore.ai.agent.ZtAgentAiSettingsActivity
+import com.termux.zerocore.ai.agent.ZtAgentHubActivity
 class ZtSettingsActivity : BaseTitleActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,7 +25,7 @@ class ZtSettingsActivity : BaseTitleActivity() {
             startActivity(Intent(this, MainAiSettings::class.java))
         }
         findViewById<CardView>(R.id.agent_ai_entry).setOnClickListener {
-            startActivity(Intent(this, ZtAgentAiSettingsActivity::class.java))
+            startActivity(Intent(this, ZtAgentHubActivity::class.java))
         }
         findViewById<CardView>(R.id.developer_options_card).setOnClickListener {
             startActivity(Intent(this, ZtDeveloperOptionsActivity::class.java))

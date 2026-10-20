@@ -147,6 +147,10 @@
             android:exported="false"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
 
+        <activity android:name=".zerocore.ai.agent.ZtAgentHubActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
+
         <activity android:name=".zerocore.ai.agent.ZtAgentAiSkillsActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
