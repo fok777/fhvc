@@ -51,6 +51,11 @@ class ZtAgentAiChatClient(
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
+    /** 端点的限制档案，决定令牌桶速率与并发上限。 */
+    private val profile: ZtEndpointProfile = ZtEndpointProfiles.fromUrl(config.apiUrl)
+
+    private fun limiter(): ZtRateLimiter = limiterCache.getOrPut(profile.id) { ZtRateLimiter(profile) }
+
     private var activeCall: Call? = null
 
     fun cancel() {
@@ -69,34 +74,110 @@ class ZtAgentAiChatClient(
                 error = ZtLocaleStrings.getString(com.termux.R.string.zt_ai_agent_not_configured)
             )
         }
+
+        val limiter = limiter()
+        if (!limiter.acquire()) {
+            return throttled(limiter)
+        }
         return try {
-            val bodyJson = buildRequestBody(messages, stream = false, tools = tools)
-            val body = bodyJson.toRequestBody(JSON_MEDIA_TYPE)
-            val request = Request.Builder()
-                .url(config.apiUrl.trim())
-                .addHeader("Authorization", "Bearer ${config.apiKey.trim()}")
-                .addHeader("Content-Type", "application/json")
-                .post(body)
-                .build()
+            var attempt = 0
+            while (true) {
+                val outcome = callOnce(messages, tools)
+                if (outcome.code == 0) {
+                    limiter.onSuccess()
+                    return outcome.result
+                }
+                limiter.onFailure(outcome.code)
+                val retryable = outcome.code == 429 || outcome.code in 500..599
+                if (!retryable || !profile.retryOn429 || attempt >= MAX_RETRIES) {
+                    return outcome.result
+                }
+                val waitMs = outcome.retryAfterMs ?: limiter.backoffMs(attempt)
+                attempt++
+                android.util.Log.i(TAG, "retry ${attempt}/$MAX_RETRIES after ${waitMs}ms (HTTP ${outcome.code})")
+                Thread.sleep(waitMs)
+                if (limiter.isBreakerOpen()) {
+                    return outcome.result
+                }
+            }
+        } finally {
+            limiter.release()
+            activeCall = null
+        }
+    }
+
+    private fun throttled(limiter: ZtRateLimiter): CompletionResult {
+        val remaining = limiter.breakerRemainingMs()
+        val msg = if (remaining > 0) {
+            "连续失败过多，已暂停 ${remaining / 1000} 秒后重试"
+        } else {
+            "已到达端点速率上限（${profile.rpm}/分钟），请求排队超时"
+        }
+        return CompletionResult(content = null, toolCalls = emptyList(), error = msg)
+    }
+
+    private data class Outcome(
+        val code: Int,
+        val result: CompletionResult,
+        val retryAfterMs: Long?
+    )
+
+    /** 发一次请求。code == 0 表示成功，其余为 HTTP 状态码（-1 表示网络异常）。 */
+    private fun callOnce(
+        messages: List<ChatMessage>,
+        tools: JSONArray?
+    ): Outcome {
+        val bodyJson = buildRequestBody(messages, stream = false, tools = tools)
+        val body = bodyJson.toRequestBody(JSON_MEDIA_TYPE)
+        val request = Request.Builder()
+            .url(config.apiUrl.trim())
+            .addHeader("Authorization", "Bearer ${config.apiKey.trim()}")
+            .addHeader("Content-Type", "application/json")
+            .post(body)
+            .build()
+
+        return try {
             val call = client.newCall(request)
             activeCall = call
             call.execute().use { response ->
                 val responseBody = response.body?.string().orEmpty()
                 if (!response.isSuccessful) {
-                    return CompletionResult(
-                        content = null,
-                        toolCalls = emptyList(),
-                        error = "HTTP ${response.code}: $responseBody"
+                    Outcome(
+                        code = response.code,
+                        result = CompletionResult(
+                            content = null,
+                            toolCalls = emptyList(),
+                            error = "HTTP ${response.code}: $responseBody"
+                        ),
+                        retryAfterMs = parseRetryAfter(response)
                     )
+                } else {
+                    Outcome(0, parseCompletionResponse(responseBody), null)
                 }
-                parseCompletionResponse(responseBody)
             }
         } catch (e: Exception) {
             LogUtils.e(TAG, "chatCompletionSync error: $e")
-            CompletionResult(content = null, toolCalls = emptyList(), error = e.message ?: "Request error")
-        } finally {
-            activeCall = null
+            Outcome(
+                code = -1,
+                result = CompletionResult(
+                    content = null,
+                    toolCalls = emptyList(),
+                    error = e.message ?: "Request error"
+                ),
+                retryAfterMs = null
+            )
         }
+    }
+
+    /** Retry-After 既可能是秒数，也可能是 HTTP-date。 */
+    private fun parseRetryAfter(response: okhttp3.Response): Long? {
+        val raw = response.header("Retry-After")?.trim() ?: return null
+        raw.toLongOrNull()?.let { return (it * 1000).coerceIn(0, 120_000) }
+        return runCatching {
+            val date = java.text.SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", java.util.Locale.US)
+                .parse(raw) ?: return null
+            (date.time - System.currentTimeMillis()).coerceIn(0, 120_000)
+        }.getOrNull()
     }
 
     fun chat(messages: List<ChatMessage>, stream: Boolean, listener: Listener) {
@@ -107,6 +188,14 @@ class ZtAgentAiChatClient(
             }
             return
         }
+
+        val limiter = limiter()
+        if (limiter.isBreakerOpen()) {
+            postError(listener, "连续失败过多，已暂停 ${limiter.breakerRemainingMs() / 1000} 秒后重试")
+            return
+        }
+        // 流式请求从 UI 发起，最多等一小会儿，取不到令牌也照发，交给服务端兜底。
+        val acquired = limiter.acquire(STREAM_ACQUIRE_MS)
 
         try {
             val bodyJson = buildRequestBody(messages, stream, tools = null)
@@ -121,14 +210,22 @@ class ZtAgentAiChatClient(
             activeCall = client.newCall(request)
             activeCall!!.enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
+                    if (acquired) limiter.release()
+                    limiter.onFailure(-1)
                     if (call.isCanceled()) return
                     LogUtils.e(TAG, "chat onFailure: $e")
                     postError(listener, e.message ?: "Network error")
                 }
 
                 override fun onResponse(call: Call, response: okhttp3.Response) {
+                    if (!response.isSuccessful) {
+                        limiter.onFailure(response.code)
+                    } else {
+                        limiter.onSuccess()
+                    }
                     if (call.isCanceled()) {
                         response.close()
+                        if (acquired) limiter.release()
                         return
                     }
                     response.use { resp ->
@@ -161,6 +258,8 @@ class ZtAgentAiChatClient(
                             if (call.isCanceled()) return
                             LogUtils.e(TAG, "chat parse error: $e")
                             postError(listener, e.message ?: "Parse error")
+                        } finally {
+                            if (acquired) limiter.release()
                         }
                     }
                 }
@@ -297,5 +396,17 @@ class ZtAgentAiChatClient(
         private const val ROLE_ASSISTANT = "assistant"
         private const val ROLE_TOOL = "tool"
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
+
+        /** 429 / 5xx 最多重试次数。超过就交给上层，不再硬撞。 */
+        private const val MAX_RETRIES = 5
+
+        /** 流式请求从 UI 线程发起，令牌等待上限，避免界面卡死。 */
+        private const val STREAM_ACQUIRE_MS = 800L
+
+        /** 限速器按档案 id 复用，否则每次新建 client 都会重置令牌桶。 */
+        private val limiterCache = java.util.concurrent.ConcurrentHashMap<String, ZtRateLimiter>()
+
+        /** 供设置页展示当前端点的限制。 */
+        fun profileFor(apiUrl: String): ZtEndpointProfile = ZtEndpointProfiles.fromUrl(apiUrl)
     }
 }
