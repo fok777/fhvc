@@ -51,10 +51,21 @@ class ZtAgentAiChatClient(
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
-    /** 端点的限制档案，决定令牌桶速率与并发上限。 */
-    private val profile: ZtEndpointProfile = ZtEndpointProfiles.fromUrl(config.apiUrl)
+    /**
+     * 端点的限制档案，决定令牌桶速率与并发上限。
+     * 每次取都重新读，用户在设置里改完不用重建 client 就生效；
+     * 限速器本身按 id 复用，改了 rpm 才换新的。
+     */
+    private val profile: ZtEndpointProfile get() = ZtAgentAiConfigHelper.endpointProfile()
 
-    private fun limiter(): ZtRateLimiter = limiterCache.getOrPut(profile.id) { ZtRateLimiter(profile) }
+    private fun limiter(): ZtRateLimiter {
+        val p = profile
+        val cached = limiterCache[p.id]
+        if (cached != null && cached.matches(p)) return cached
+        val created = ZtRateLimiter(p)
+        limiterCache[p.id] = created
+        return created
+    }
 
     private var activeCall: Call? = null
 

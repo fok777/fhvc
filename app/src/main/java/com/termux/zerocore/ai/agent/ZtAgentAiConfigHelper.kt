@@ -15,6 +15,10 @@ object ZtAgentAiConfigHelper {
     // ─── 死循环守卫 / 上下文预算（存通用 KV，避免改动 ZTUserBean 结构） ───────
     private const val KEY_LOOP_GUARD = "zt_agent_loop_guard"
     private const val KEY_CONTEXT_AGING = "zt_agent_context_aging"
+    private const val KEY_CONTEXT_AGING_LEVEL = "zt_agent_aging_level"
+    private const val KEY_ENDPOINT_RPM = "zt_agent_endpoint_rpm"
+    private const val KEY_ENDPOINT_CONCURRENCY = "zt_agent_endpoint_concurrency"
+    private const val KEY_ENDPOINT_TOKEN_UNLIMITED = "zt_agent_endpoint_token_unlimited"
     private const val KEY_BUDGET_CHARS = "zt_agent_budget_chars"
     private const val KEY_TOOL_RESULT_CHARS = "zt_agent_tool_result_chars"
     private const val KEY_SUBAGENT = "zt_agent_subagent_enabled"
@@ -302,19 +306,66 @@ object ZtAgentAiConfigHelper {
         SaveData.saveStringOther(KEY_CONTEXT_AGING, if (enabled) "1" else "0")
     }
 
+    /** 老化强度：0 宽松 / 1 标准 / 2 激进。 */
+    fun agingLevel(): Int = readIntPref(KEY_CONTEXT_AGING_LEVEL)?.coerceIn(0, 2) ?: 1
+
+    fun saveAgingLevel(level: Int) {
+        SaveData.saveStringOther(KEY_CONTEXT_AGING_LEVEL, level.coerceIn(0, 2).toString())
+    }
+
     /**
-     * 老化参数按当前模型的上下文窗口缩放：窗口越小，老化越激进。
+     * 老化参数按当前模型的上下文窗口缩放：窗口越小，老化越激进；
+     * 再叠加用户在设置里选的强度倍率。
      */
     fun contextAging(): ZtContextAging.AgingConfig {
         val scale = modelScale()
-        val fresh = (6.0 / scale).toInt().coerceIn(2, 8)
-        val aged = (24.0 / scale).toInt().coerceIn(8, 32)
+        val level = agingLevel()
+        // 激进档把新鲜区收窄、折叠得更狠；宽松档相反。
+        val freshMul = when (level) { 0 -> 1.6; 1 -> 1.0; else -> 0.6 }
+        val sizeMul = when (level) { 0 -> 2.0; 1 -> 1.0; else -> 0.5 }
+
+        val fresh = (6.0 / scale * freshMul).toInt().coerceIn(2, 10)
+        val aged = (24.0 / scale * freshMul).toInt().coerceIn(8, 40)
         return ZtContextAging.AgingConfig(
             freshTurns = fresh,
             agedTurns = aged,
-            agedToolChars = (900.0 / scale).toInt().coerceIn(200, 1_500),
-            ancientToolChars = (160.0 / scale).toInt().coerceIn(60, 400)
+            agedToolChars = (900.0 / scale * sizeMul).toInt().coerceIn(150, 2_000),
+            ancientToolChars = (160.0 / scale * sizeMul).toInt().coerceIn(50, 500)
         )
+    }
+
+    // ─── 端点档案 ──────────────────────────────────────────────────────────
+
+    /**
+     * 当前端点档案：以 host 自动识别结果为底，用户手改过的字段覆盖上去。
+     */
+    fun endpointProfile(): ZtEndpointProfile {
+        val base = ZtEndpointProfiles.fromUrl(loadActiveConfig().apiUrl)
+        val rpm = readIntPref(KEY_ENDPOINT_RPM)
+        val concurrency = readIntPref(KEY_ENDPOINT_CONCURRENCY)
+        val unlimited = readStringPref(KEY_ENDPOINT_TOKEN_UNLIMITED)
+        return base.copy(
+            rpm = rpm?.coerceIn(1, 10_000) ?: base.rpm,
+            maxConcurrency = concurrency?.coerceIn(1, 32) ?: base.maxConcurrency,
+            tokenUnlimited = unlimited?.let { it == "1" } ?: base.tokenUnlimited
+        )
+    }
+
+    fun saveEndpointOverrides(rpm: Int?, concurrency: Int?, tokenUnlimited: Boolean?) {
+        rpm?.let { SaveData.saveStringOther(KEY_ENDPOINT_RPM, it.coerceIn(1, 10_000).toString()) }
+        concurrency?.let {
+            SaveData.saveStringOther(KEY_ENDPOINT_CONCURRENCY, it.coerceIn(1, 32).toString())
+        }
+        tokenUnlimited?.let {
+            SaveData.saveStringOther(KEY_ENDPOINT_TOKEN_UNLIMITED, if (it) "1" else "0")
+        }
+    }
+
+    /** 清掉手改值，回到按 host 自动识别。 */
+    fun resetEndpointOverrides() {
+        SaveData.saveStringOther(KEY_ENDPOINT_RPM, "")
+        SaveData.saveStringOther(KEY_ENDPOINT_CONCURRENCY, "")
+        SaveData.saveStringOther(KEY_ENDPOINT_TOKEN_UNLIMITED, "")
     }
 
     fun contextBudget(): ZtAgentContextBudget.BudgetConfig {

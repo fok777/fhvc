@@ -36,6 +36,11 @@ class ZtRateLimiter(private val profile: ZtEndpointProfile) {
     private val breakerThreshold = 5
     private val breakerOpenMs = 30_000L
 
+    /** 档案变了就要换实例，否则旧的令牌桶速率还在沿用。 */
+    fun matches(other: ZtEndpointProfile): Boolean {
+        return other.rpm == profile.rpm && other.maxConcurrency == profile.maxConcurrency
+    }
+
     /** 熔断是否已打开。 */
     fun isBreakerOpen(): Boolean {
         val until = breakerUntilNanos
