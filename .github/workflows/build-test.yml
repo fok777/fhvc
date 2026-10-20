@@ -59,8 +59,30 @@ jobs:
       - name: 给 gradlew 执行权限
         run: chmod +x gradlew
 
+      - name: 打印环境
+        run: |
+          echo "arch=${{ inputs.arch || 'universal' }}"
+          ls -l phone.jks || echo "phone.jks 缺失"
+          java -version 2>&1 | head -2
+
       - name: 编译 Debug APK (${{ inputs.arch || 'universal' }})
-        run: ./gradlew --build-cache --parallel --stacktrace :app:assembleDebug -Darch=${{ inputs.arch || 'universal' }}
+        id: gradle
+        run: |
+          set +e
+          ./gradlew --build-cache --parallel --stacktrace :app:assembleDebug \
+            -Darch=${{ inputs.arch || 'universal' }} 2>&1 | tee build.log
+          code=${PIPESTATUS[0]}
+          echo "exit_code=$code" >> $GITHUB_OUTPUT
+          echo "GRADLE_EXIT=$code" >> $GITHUB_ENV
+          exit $code
+
+      - name: 上传构建日志
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-log
+          path: build.log
+          if-no-files-found: ignore
 
       - name: 上传 APK
         if: always()
