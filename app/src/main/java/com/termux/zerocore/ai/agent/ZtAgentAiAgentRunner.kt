@@ -63,6 +63,8 @@ class ZtAgentAiAgentRunner(
         }
         val loopGuardEnabled = ZtAgentAiConfigHelper.isLoopGuardEnabled()
         val budgetConfig = ZtAgentAiConfigHelper.contextBudget()
+        val contextAgingEnabled = ZtAgentAiConfigHelper.isContextAgingEnabled()
+        val agingConfig = ZtAgentAiConfigHelper.contextAging()
         if (loopGuardEnabled) {
             // 会话首轮（历史里还没有任何 assistant 消息）视为新会话，清空上一轮的滑动窗口。
             if (history.none { it.role == ROLE_ASSISTANT }) {
@@ -86,6 +88,11 @@ class ZtAgentAiAgentRunner(
             }
             if (terminalEnabled) {
                 appendFreshTerminalSnapshot(workingMessages)
+            }
+            // 先老化（只降精度、不删消息），再按预算兜底裁剪。
+            // 老化是纯本地操作，不消耗请求配额，所以放在每次循环都执行。
+            if (contextAgingEnabled) {
+                ZtContextAging.age(workingMessages, agingConfig)
             }
             ZtAgentContextBudget.trim(workingMessages, budgetConfig)
             val result = client.chatCompletionSync(workingMessages, tools)
