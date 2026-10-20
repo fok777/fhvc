@@ -49,6 +49,18 @@ class ZtAgentHubActivity : BaseTitleActivity() {
     }
     private val guardSwitch by lazy { findViewById<SwitchCompat>(R.id.hub_guard_switch) }
     private val guardSummary by lazy { findViewById<TextView>(R.id.hub_guard_summary) }
+    private val endpointCard by lazy { findViewById<CardView>(R.id.hub_card_endpoint) }
+    private val endpointSummary by lazy { findViewById<TextView>(R.id.hub_endpoint_summary) }
+    private val agingSwitch by lazy { findViewById<SwitchCompat>(R.id.hub_aging_switch) }
+    private val agingSummary by lazy { findViewById<TextView>(R.id.hub_aging_summary) }
+    private val agingStrengthRow by lazy { findViewById<LinearLayout>(R.id.hub_aging_strength_row) }
+    private val agingLevelCards by lazy {
+        listOf(
+            0 to findViewById<TextView>(R.id.hub_aging_mild),
+            1 to findViewById<TextView>(R.id.hub_aging_normal),
+            2 to findViewById<TextView>(R.id.hub_aging_strong)
+        )
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,6 +78,8 @@ class ZtAgentHubActivity : BaseTitleActivity() {
         bindSkills()
         bindSubAgent()
         bindGuard()
+        bindEndpoint()
+        bindAging()
         refreshAll()
     }
 
@@ -235,6 +249,8 @@ class ZtAgentHubActivity : BaseTitleActivity() {
         refreshSkills()
         refreshSubAgent()
         refreshGuard()
+        refreshEndpoint()
+        refreshAging()
         val config = ZtAgentAiConfigHelper.loadActiveConfig()
         statusView.text = if (ZtAgentAiConfigHelper.isConfigured()) {
             "已配置 · ${config.provider} / ${config.model}"
@@ -246,6 +262,138 @@ class ZtAgentHubActivity : BaseTitleActivity() {
     // ═════════════════════════════════════════════════════════════════════════
     // 以下子页面全部用代码搭 UI
     // ═════════════════════════════════════════════════════════════════════════
+
+    // ─── 端点与限速 ──────────────────────────────────────────────────────────
+
+    private fun bindEndpoint() {
+        endpointCard.setOnClickListener { showEndpointDialog() }
+    }
+
+    private fun refreshEndpoint() {
+        val profile = ZtAgentAiConfigHelper.endpointProfile()
+        val auto = ZtEndpointProfiles.fromUrl(ZtAgentAiConfigHelper.loadActiveConfig().apiUrl)
+        val manual = profile.rpm != auto.rpm || profile.maxConcurrency != auto.maxConcurrency
+        val token = if (profile.tokenUnlimited) "token 不限" else "按 token 计费"
+        endpointSummary.text = buildString {
+            append(auto.id)
+            append(" · ")
+            append(profile.rpm)
+            append(" 次/分钟 · 并发 ")
+            append(profile.maxConcurrency)
+            append(" · ")
+            append(token)
+            if (manual) append(" · 已手动覆盖")
+        }
+    }
+
+    private fun showEndpointDialog() {
+        val profile = ZtAgentAiConfigHelper.endpointProfile()
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(12), dp(20), dp(4))
+        }
+
+        fun label(text: String) {
+            container.addView(TextView(this).apply {
+                this.text = text
+                setTextColor(Color.WHITE)
+                textSize = 13f
+                setPadding(0, dp(10), 0, dp(4))
+            })
+        }
+
+        fun hint(text: String) {
+            container.addView(TextView(this).apply {
+                this.text = text
+                setTextColor(runCatching { getColor(R.color.md_grey_500) }.getOrDefault(Color.GRAY))
+                textSize = 11f
+                setPadding(0, 0, 0, dp(4))
+            })
+        }
+
+        fun field(initial: String, inputType: Int): EditText = EditText(this).apply {
+            setText(initial)
+            this.inputType = inputType
+            setTextColor(Color.WHITE)
+            setHintTextColor(Color.GRAY)
+            textSize = 13f
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+        }
+
+        label("每分钟请求上限 (RPM)")
+        hint("免费端点普遍很低。改小能避免 429，改大只会更快撞墙。")
+        val rpmEdit = field(profile.rpm.toString(), InputType.TYPE_CLASS_NUMBER)
+
+        label("最大并发")
+        hint("免费端点通常是 1。调高不会更快，只会让请求排队或被拒。")
+        val concEdit = field(profile.maxConcurrency.toString(), InputType.TYPE_CLASS_NUMBER)
+
+        container.addView(rpmEdit)
+        container.addView(concEdit)
+
+        val unlimitedSwitch = SwitchCompat(this).apply {
+            isChecked = profile.tokenUnlimited
+            text = "token 不限量（免费档）"
+            setTextColor(Color.WHITE)
+            textSize = 13f
+            setPadding(0, dp(12), 0, 0)
+        }
+        hint("勾上后不会为了省 token 额外发请求；压缩类操作只在按 token 计费时才划算。")
+        container.addView(unlimitedSwitch)
+
+        val scroll = ScrollView(this).apply { addView(container) }
+
+        AlertDialog.Builder(this)
+            .setTitle("端点与限速")
+            .setView(scroll)
+            .setNegativeButton("取消", null)
+            .setNeutralButton("自动识别") { _, _ ->
+                ZtAgentAiConfigHelper.resetEndpointOverrides()
+                refreshEndpoint()
+            }
+            .setPositiveButton("保存") { _, _ ->
+                val rpm = rpmEdit.text.toString().toIntOrNull()
+                val conc = concEdit.text.toString().toIntOrNull()
+                ZtAgentAiConfigHelper.saveEndpointOverrides(rpm, conc, unlimitedSwitch.isChecked)
+                refreshEndpoint()
+            }
+            .show()
+    }
+
+    // ─── 上下文老化 ──────────────────────────────────────────────────────────
+
+    private fun bindAging() {
+        agingSwitch.setOnCheckedChangeListener { _, checked ->
+            ZtAgentAiConfigHelper.setContextAgingEnabled(checked)
+            refreshAging()
+        }
+        agingLevelCards.forEach { (level, view) ->
+            view.setOnClickListener {
+                ZtAgentAiConfigHelper.saveAgingLevel(level)
+                refreshAging()
+            }
+        }
+    }
+
+    private fun refreshAging() {
+        val enabled = ZtAgentAiConfigHelper.isContextAgingEnabled()
+        agingSwitch.isChecked = enabled
+        agingStrengthRow.visibility = if (enabled) android.view.View.VISIBLE else android.view.View.GONE
+
+        val active = ZtAgentAiConfigHelper.agingLevel()
+        val normal = runCatching { getColor(R.color.color_55000000) }.getOrDefault(Color.DKGRAY)
+        val selected = runCatching { getColor(R.color.color_5548baf3) }.getOrDefault(Color.CYAN)
+        agingLevelCards.forEach { (level, view) ->
+            view.setBackgroundColor(if (level == active) selected else normal)
+        }
+
+        agingSummary.text = if (!enabled) {
+            "已关闭 · 长会话会完整重发历史，越聊越慢"
+        } else {
+            val cfg = ZtAgentAiConfigHelper.contextAging()
+            "已开启 · 最近 ${cfg.freshTurns} 轮完整，更早折叠到 ${cfg.agedToolChars} 字符"
+        }
+    }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density + 0.5f).toInt()
 
