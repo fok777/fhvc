@@ -79,31 +79,40 @@ class ZtAgentAiChatClient(
         if (!limiter.acquire()) {
             return throttled(limiter)
         }
-        return try {
+        var finalResult: CompletionResult? = null
+        try {
             var attempt = 0
-            while (true) {
+            while (finalResult == null) {
                 val outcome = callOnce(messages, tools)
                 if (outcome.code == 0) {
                     limiter.onSuccess()
-                    return outcome.result
+                    finalResult = outcome.result
+                    break
                 }
                 limiter.onFailure(outcome.code)
                 val retryable = outcome.code == 429 || outcome.code in 500..599
                 if (!retryable || !profile.retryOn429 || attempt >= MAX_RETRIES) {
-                    return outcome.result
+                    finalResult = outcome.result
+                    break
                 }
                 val waitMs = outcome.retryAfterMs ?: limiter.backoffMs(attempt)
                 attempt++
-                android.util.Log.i(TAG, "retry ${attempt}/$MAX_RETRIES after ${waitMs}ms (HTTP ${outcome.code})")
+                android.util.Log.i(TAG, "retry $attempt/$MAX_RETRIES after ${waitMs}ms (HTTP ${outcome.code})")
                 Thread.sleep(waitMs)
                 if (limiter.isBreakerOpen()) {
-                    return outcome.result
+                    finalResult = outcome.result
+                    break
                 }
             }
         } finally {
             limiter.release()
             activeCall = null
         }
+        return finalResult ?: CompletionResult(
+            content = null,
+            toolCalls = emptyList(),
+            error = "Request did not complete"
+        )
     }
 
     private fun throttled(limiter: ZtRateLimiter): CompletionResult {
