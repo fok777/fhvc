@@ -20,6 +20,9 @@ on:
           - x86
           - x86_64
 
+permissions:
+  contents: write
+
 concurrency:
   group: build-test-${{ github.ref }}
   cancel-in-progress: true
@@ -91,7 +94,7 @@ jobs:
           git config user.name "build-test"
           git add -f build-error.txt build.log
           git commit -q -m "build error snippet [skip ci]" || echo "nothing to commit"
-          git push origin HEAD:build-test || echo "push failed"
+          git push origin HEAD:build-test
 
       - name: 上传构建日志
         if: always()
