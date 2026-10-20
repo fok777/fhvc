@@ -397,22 +397,19 @@ class ZtAgentLoopGuard(initialConfig: ZtLoopConfig = ZtLoopConfig()) {
      */
     private fun extractUnknownToolName(errorMessage: String?): String? {
         if (errorMessage.isNullOrBlank()) return null
-        UNKNOWN_TOOL_RE_1.find(errorMessage)?.groupValues?.getOrNull(1)?.let { return it }
-        UNKNOWN_TOOL_RE_2.find(errorMessage)?.groupValues?.getOrNull(1)?.let { return it }
-        UNKNOWN_TOOL_RE_BACKTICK.find(errorMessage)?.groupValues?.getOrNull(1)?.let { return it }
+        val m1 = UNKNOWN_TOOL_RE_1.find(errorMessage)
+        if (m1 != null) return m1.groupValues[1]
+        val m2 = UNKNOWN_TOOL_RE_2.find(errorMessage)
+        if (m2 != null) return m2.groupValues[1]
+        val m3 = UNKNOWN_TOOL_RE_BACKTICK.find(errorMessage)
+        if (m3 != null) return m3.groupValues[1]
         return null
     }
 
     private fun sha256(s: String): String {
         val md = MessageDigest.getInstance("SHA-256")
-        val bytes = md.digest(s.toByteArray(Charsets.UTF_8))
-        val sb = StringBuilder(bytes.size * 2)
-        for (b in bytes) {
-            val v = b.toInt() and 0xFF
-            sb.append(HEX[v ushr 4])
-            sb.append(HEX[v and 0x0F])
-        }
-        return sb.toString()
+        val bytes: ByteArray = md.digest(s.toByteArray(Charsets.UTF_8))
+        return bytes.joinToString("") { "%02x".format(it) }
     }
 
     companion object {
@@ -431,6 +428,5 @@ class ZtAgentLoopGuard(initialConfig: ZtLoopConfig = ZtLoopConfig()) {
             """unknown\s+tool[^\n]*?[`'"]([a-zA-Z0-9_.\-]+)[`'"]""",
             RegexOption.IGNORE_CASE
         )
-        private val HEX = "0123456789abcdef".toCharArray()
     }
 }
