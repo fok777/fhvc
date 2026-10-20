@@ -60,6 +60,9 @@ class ZtAgentAiSettingsActivity : BaseTitleActivity() {
         skillsEntry.setOnClickListener {
             startActivity(Intent(this, ZtAgentAiSkillsActivity::class.java))
         }
+        findViewById<CardView>(R.id.agent_ai_hub_entry).setOnClickListener {
+            startActivity(Intent(this, ZtAgentHubActivity::class.java))
+        }
         loadFieldsFromConfig()
         bindAutoSave()
         refreshProviderHighlight()
