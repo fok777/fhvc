@@ -20,6 +20,9 @@ on:
           - x86
           - x86_64
 
+permissions:
+  contents: write
+
 concurrency:
   group: build-test-${{ github.ref }}
   cancel-in-progress: true
@@ -59,8 +62,47 @@ jobs:
       - name: 给 gradlew 执行权限
         run: chmod +x gradlew
 
+      - name: 打印环境
+        run: |
+          echo "arch=${{ inputs.arch || 'universal' }}"
+          ls -l phone.jks || echo "phone.jks 缺失"
+          echo "ANDROID_HOME=$ANDROID_HOME ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          ls "$ANDROID_SDK_ROOT" 2>/dev/null || true
+          ls "$ANDROID_SDK_ROOT/ndk" 2>/dev/null || echo "无 ndk 目录"
+
       - name: 编译 Debug APK (${{ inputs.arch || 'universal' }})
-        run: ./gradlew --build-cache --parallel --stacktrace :app:assembleDebug -Darch=${{ inputs.arch || 'universal' }}
+        run: |
+          set +e
+          ./gradlew --build-cache --stacktrace :app:assembleDebug \
+            -Darch=${{ inputs.arch || 'universal' }} 2>&1 | tee build.log
+          code=${PIPESTATUS[0]}
+          echo "GRADLE_EXIT=$code" >> $GITHUB_ENV
+          exit $code
+
+      - name: 保存构建错误片段
+        if: failure()
+        run: |
+          {
+            echo "run: ${{ github.run_id }}"
+            echo "gradle exit: $GRADLE_EXIT"
+            echo "---- grep error ----"
+            grep -n -E "What went wrong|FAILURE:|error:|Could not|Cannot|not found|FAILED" build.log | head -40
+            echo "---- tail 120 ----"
+            tail -120 build.log
+          } > build-error.txt 2>&1
+          git config user.email "action@github.com"
+          git config user.name "build-test"
+          git add -f build-error.txt build.log
+          git commit -q -m "build error snippet [skip ci]" || echo "nothing to commit"
+          git push origin HEAD:build-test
+
+      - name: 上传构建日志
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-log
+          path: build.log
+          if-no-files-found: ignore
 
       - name: 上传 APK
         if: always()
