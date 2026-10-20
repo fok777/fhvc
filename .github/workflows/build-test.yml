@@ -76,24 +76,22 @@ jobs:
           echo "GRADLE_EXIT=$code" >> $GITHUB_ENV
           exit $code
 
-      - name: 回传构建错误片段
+      - name: 保存构建错误片段
         if: failure()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            let log = '';
-            try { log = fs.readFileSync('build.log', 'utf8'); } catch (e) { log = '(no build.log)'; }
-            const lines = log.split('\n');
-            let idx = lines.findIndex(l => /What went wrong|FAILURE:|error:|Could not|Cannot|not found/i.test(l));
-            if (idx < 0) idx = Math.max(0, lines.length - 80);
-            const snippet = lines.slice(Math.max(0, idx - 3), idx + 60).join('\n');
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: 'build-test 失败 #' + context.runNumber,
-              body: '```\n' + snippet.slice(0, 50000) + '\n```'
-            });
+        run: |
+          {
+            echo "run: ${{ github.run_id }}"
+            echo "gradle exit: $GRADLE_EXIT"
+            echo "---- grep error ----"
+            grep -n -E "What went wrong|FAILURE:|error:|Could not|Cannot|not found|FAILED" build.log | head -40
+            echo "---- tail 120 ----"
+            tail -120 build.log
+          } > build-error.txt 2>&1
+          git config user.email "action@github.com"
+          git config user.name "build-test"
+          git add -f build-error.txt build.log
+          git commit -q -m "build error snippet [skip ci]" || echo "nothing to commit"
+          git push origin HEAD:build-test || echo "push failed"
 
       - name: 上传构建日志
         if: always()
