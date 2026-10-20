@@ -63,18 +63,37 @@ jobs:
         run: |
           echo "arch=${{ inputs.arch || 'universal' }}"
           ls -l phone.jks || echo "phone.jks 缺失"
-          java -version 2>&1 | head -2
+          echo "ANDROID_HOME=$ANDROID_HOME ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          ls "$ANDROID_SDK_ROOT" 2>/dev/null || true
+          ls "$ANDROID_SDK_ROOT/ndk" 2>/dev/null || echo "无 ndk 目录"
 
       - name: 编译 Debug APK (${{ inputs.arch || 'universal' }})
-        id: gradle
         run: |
           set +e
-          ./gradlew --build-cache --parallel --stacktrace :app:assembleDebug \
+          ./gradlew --build-cache --stacktrace :app:assembleDebug \
             -Darch=${{ inputs.arch || 'universal' }} 2>&1 | tee build.log
           code=${PIPESTATUS[0]}
-          echo "exit_code=$code" >> $GITHUB_OUTPUT
           echo "GRADLE_EXIT=$code" >> $GITHUB_ENV
           exit $code
+
+      - name: 回传构建错误片段
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let log = '';
+            try { log = fs.readFileSync('build.log', 'utf8'); } catch (e) { log = '(no build.log)'; }
+            const lines = log.split('\n');
+            let idx = lines.findIndex(l => /What went wrong|FAILURE:|error:|Could not|Cannot|not found/i.test(l));
+            if (idx < 0) idx = Math.max(0, lines.length - 80);
+            const snippet = lines.slice(Math.max(0, idx - 3), idx + 60).join('\n');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'build-test 失败 #' + context.runNumber,
+              body: '```\n' + snippet.slice(0, 50000) + '\n```'
+            });
 
       - name: 上传构建日志
         if: always()
