@@ -1,0 +1,72 @@
+name: Build Test
+
+# 构建测试分支专用：push 到 build-test 即触发，也可以手动跑。
+# 只编 Debug，不签名、不发版，单纯验证源码能编译通过。
+
+on:
+  push:
+    branches: [build-test]
+  workflow_dispatch:
+    inputs:
+      arch:
+        description: '目标架构'
+        required: true
+        type: choice
+        default: universal
+        options:
+          - universal
+          - arm
+          - arm64
+          - x86
+          - x86_64
+
+concurrency:
+  group: build-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    env:
+      JAVA_VERSION: "17"
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: 配置 JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: 配置 Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          add-job-summary: always
+
+      - name: 缓存 Bootstrap
+        uses: actions/cache@v5
+        with:
+          path: app/src/main/cpp/bootstrap-*.zip
+          key: bootstrap-${{ hashFiles('app/build.gradle') }}
+          restore-keys: bootstrap-
+
+      - name: 给 gradlew 执行权限
+        run: chmod +x gradlew
+
+      - name: 编译 Debug APK (${{ inputs.arch || 'universal' }})
+        run: ./gradlew --build-cache --parallel --stacktrace :app:assembleDebug -Darch=${{ inputs.arch || 'universal' }}
+
+      - name: 上传 APK
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: ZeroTermux-debug-${{ inputs.arch || 'universal' }}
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: ignore
