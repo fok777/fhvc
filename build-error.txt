@@ -1,0 +1,160 @@
+run: 39433598758
+gradle exit: 1
+---- grep error ----
+80:> Task :app:processDebugResources FAILED
+91:FAILURE: Build failed with an exception.
+93:* What went wrong:
+97:     ERROR: /home/runner/work/fhvc/fhvc/app/build/intermediates/packaged_manifests/debug/processDebugManifestForPackage/AndroidManifest.xml:2: AAPT: error: resource string/shared_user_label (aka com.termux:string/shared_user_label) not found.
+99:     ERROR: /home/runner/work/fhvc/fhvc/app/build/intermediates/packaged_manifests/debug/processDebugManifestForPackage/AndroidManifest.xml:30: AAPT: error: resource string/permission_run_command_description (aka com.termux:string/permission_run_command_description) not found.
+101:     ERROR: /home/runner/work/fhvc/fhvc/app/build/intermediates/packaged_manifests/debug/processDebugManifestForPackage/AndroidManifest.xml:30: AAPT: error: resource string/permission_run_command_label (aka com.termux:string/permission_run_command_label) not found.
+103:     ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:67:5-481:19: AAPT: error: resource drawable/banner (aka com.termux:drawable/banner) not found.
+105:     ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:67:5-481:19: AAPT: error: resource style/Theme.TermuxApp.DayNight.DarkActionBar (aka com.termux:style/Theme.TermuxApp.DayNight.DarkActionBar) not found.
+107:     ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:216:9-233:20: AAPT: error: resource style/GuideStyle (aka com.termux:style/GuideStyle) not found.
+109:     ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:236:9-255:20: AAPT: error: resource style/Theme.TermuxActivity.DayNight.NoActionBar (aka com.termux:style/Theme.TermuxActivity.DayNight.NoActionBar) not found.
+111:     ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:300:9-304:74: AAPT: error: resource string/title_activity_termux_settings (aka com.termux:string/title_activity_termux_settings) not found.
+113:     ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:322:13-324:54: AAPT: error: resource xml/file_paths (aka com.termux:xml/file_paths) not found.
+115:     ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:339:9-341:54: AAPT: error: resource style/ThemeBaseDialog (aka com.termux:style/ThemeBaseDialog) not found.
+117:     ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:343:9-345:54: AAPT: error: resource style/ThemeBaseDialog (aka com.termux:style/ThemeBaseDialog) not found.
+119:     ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:352:9-355:75: AAPT: error: resource style/Theme.AppCompat.TermuxReportActivity (aka com.termux:style/Theme.AppCompat.TermuxReportActivity) not found.
+121:     ERROR: /home/runner/work/fhvc/fhvc/app/build/intermediates/packaged_manifests/debug/processDebugManifestForPackage/AndroidManifest.xml:384: AAPT: error: resource string/opne_in_zerotermux (aka com.termux:string/opne_in_zerotermux) not found.
+123:     ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:389:9-408:26: AAPT: error: resource string/opne_in_zerotermux (aka com.termux:string/opne_in_zerotermux) not found.
+125:     ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:366:9-387:26: AAPT: error: resource string/opne_in_zerotermux (aka com.termux:string/opne_in_zerotermux) not found.
+127:     ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:458:9-460:52: AAPT: error: resource drawable/ic_launcher (aka com.termux:drawable/ic_launcher) not found.
+275:ERROR: /home/runner/work/fhvc/fhvc/app/build/intermediates/packaged_manifests/debug/processDebugManifestForPackage/AndroidManifest.xml:2: AAPT: error: resource string/shared_user_label (aka com.termux:string/shared_user_label) not found.
+277:ERROR: /home/runner/work/fhvc/fhvc/app/build/intermediates/packaged_manifests/debug/processDebugManifestForPackage/AndroidManifest.xml:30: AAPT: error: resource string/permission_run_command_description (aka com.termux:string/permission_run_command_description) not found.
+279:ERROR: /home/runner/work/fhvc/fhvc/app/build/intermediates/packaged_manifests/debug/processDebugManifestForPackage/AndroidManifest.xml:30: AAPT: error: resource string/permission_run_command_label (aka com.termux:string/permission_run_command_label) not found.
+281:ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:67:5-481:19: AAPT: error: resource drawable/banner (aka com.termux:drawable/banner) not found.
+283:ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:67:5-481:19: AAPT: error: resource style/Theme.TermuxApp.DayNight.DarkActionBar (aka com.termux:style/Theme.TermuxApp.DayNight.DarkActionBar) not found.
+285:ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:216:9-233:20: AAPT: error: resource style/GuideStyle (aka com.termux:style/GuideStyle) not found.
+287:ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:236:9-255:20: AAPT: error: resource style/Theme.TermuxActivity.DayNight.NoActionBar (aka com.termux:style/Theme.TermuxActivity.DayNight.NoActionBar) not found.
+289:ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:300:9-304:74: AAPT: error: resource string/title_activity_termux_settings (aka com.termux:string/title_activity_termux_settings) not found.
+291:ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:322:13-324:54: AAPT: error: resource xml/file_paths (aka com.termux:xml/file_paths) not found.
+293:ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:339:9-341:54: AAPT: error: resource style/ThemeBaseDialog (aka com.termux:style/ThemeBaseDialog) not found.
+295:ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:343:9-345:54: AAPT: error: resource style/ThemeBaseDialog (aka com.termux:style/ThemeBaseDialog) not found.
+297:ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:352:9-355:75: AAPT: error: resource style/Theme.AppCompat.TermuxReportActivity (aka com.termux:style/Theme.AppCompat.TermuxReportActivity) not found.
+299:ERROR: /home/runner/work/fhvc/fhvc/app/build/intermediates/packaged_manifests/debug/processDebugManifestForPackage/AndroidManifest.xml:384: AAPT: error: resource string/opne_in_zerotermux (aka com.termux:string/opne_in_zerotermux) not found.
+301:ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:389:9-408:26: AAPT: error: resource string/opne_in_zerotermux (aka com.termux:string/opne_in_zerotermux) not found.
+303:ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:366:9-387:26: AAPT: error: resource string/opne_in_zerotermux (aka com.termux:string/opne_in_zerotermux) not found.
+305:ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:458:9-460:52: AAPT: error: resource drawable/ic_launcher (aka com.termux:drawable/ic_launcher) not found.
+354:BUILD FAILED in 16s
+---- tail 120 ----
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:53)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:35)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:37)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:27)
+	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:49)
+	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:27)
+	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:71)
+	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:39)
+	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:64)
+	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:35)
+	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:62)
+	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:40)
+	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:76)
+	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:45)
+	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.executeWithNonEmptySources(AbstractSkipEmptyWorkStep.java:136)
+	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:61)
+	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:38)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsStartedStep.execute(MarkSnapshottingInputsStartedStep.java:38)
+	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:36)
+	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:23)
+	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:75)
+	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:41)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.lambda$execute$0(AssignMutableWorkspaceStep.java:35)
+	at org.gradle.api.internal.tasks.execution.TaskExecution$4.withWorkspace(TaskExecution.java:297)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:31)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:22)
+	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:40)
+	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:23)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.lambda$execute$2(ExecuteWorkBuildOperationFiringStep.java:67)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:67)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:39)
+	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:46)
+	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:34)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:44)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:31)
+	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:64)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:132)
+	... 30 more
+Caused by: com.android.builder.internal.aapt.v2.Aapt2Exception: Android resource linking failed
+ERROR: /home/runner/work/fhvc/fhvc/app/build/intermediates/packaged_manifests/debug/processDebugManifestForPackage/AndroidManifest.xml:2: AAPT: error: resource string/shared_user_label (aka com.termux:string/shared_user_label) not found.
+    
+ERROR: /home/runner/work/fhvc/fhvc/app/build/intermediates/packaged_manifests/debug/processDebugManifestForPackage/AndroidManifest.xml:30: AAPT: error: resource string/permission_run_command_description (aka com.termux:string/permission_run_command_description) not found.
+    
+ERROR: /home/runner/work/fhvc/fhvc/app/build/intermediates/packaged_manifests/debug/processDebugManifestForPackage/AndroidManifest.xml:30: AAPT: error: resource string/permission_run_command_label (aka com.termux:string/permission_run_command_label) not found.
+    
+ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:67:5-481:19: AAPT: error: resource drawable/banner (aka com.termux:drawable/banner) not found.
+    
+ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:67:5-481:19: AAPT: error: resource style/Theme.TermuxApp.DayNight.DarkActionBar (aka com.termux:style/Theme.TermuxApp.DayNight.DarkActionBar) not found.
+    
+ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:216:9-233:20: AAPT: error: resource style/GuideStyle (aka com.termux:style/GuideStyle) not found.
+    
+ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:236:9-255:20: AAPT: error: resource style/Theme.TermuxActivity.DayNight.NoActionBar (aka com.termux:style/Theme.TermuxActivity.DayNight.NoActionBar) not found.
+    
+ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:300:9-304:74: AAPT: error: resource string/title_activity_termux_settings (aka com.termux:string/title_activity_termux_settings) not found.
+    
+ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:322:13-324:54: AAPT: error: resource xml/file_paths (aka com.termux:xml/file_paths) not found.
+    
+ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:339:9-341:54: AAPT: error: resource style/ThemeBaseDialog (aka com.termux:style/ThemeBaseDialog) not found.
+    
+ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:343:9-345:54: AAPT: error: resource style/ThemeBaseDialog (aka com.termux:style/ThemeBaseDialog) not found.
+    
+ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:352:9-355:75: AAPT: error: resource style/Theme.AppCompat.TermuxReportActivity (aka com.termux:style/Theme.AppCompat.TermuxReportActivity) not found.
+    
+ERROR: /home/runner/work/fhvc/fhvc/app/build/intermediates/packaged_manifests/debug/processDebugManifestForPackage/AndroidManifest.xml:384: AAPT: error: resource string/opne_in_zerotermux (aka com.termux:string/opne_in_zerotermux) not found.
+    
+ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:389:9-408:26: AAPT: error: resource string/opne_in_zerotermux (aka com.termux:string/opne_in_zerotermux) not found.
+    
+ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:366:9-387:26: AAPT: error: resource string/opne_in_zerotermux (aka com.termux:string/opne_in_zerotermux) not found.
+    
+ERROR: /home/runner/work/fhvc/fhvc/app/src/main/AndroidManifest.xml:458:9-460:52: AAPT: error: resource drawable/ic_launcher (aka com.termux:drawable/ic_launcher) not found.
+    
+	at com.android.builder.internal.aapt.v2.Aapt2Exception$Companion.create(Aapt2Exception.kt:45)
+	at com.android.builder.internal.aapt.v2.Aapt2Exception$Companion.create$default(Aapt2Exception.kt:31)
+	at com.android.build.gradle.internal.res.Aapt2ErrorUtils.rewriteException(Aapt2ErrorUtils.kt:262)
+	at com.android.build.gradle.internal.res.Aapt2ErrorUtils.rewriteLinkException(Aapt2ErrorUtils.kt:133)
+	at com.android.build.gradle.internal.res.Aapt2ProcessResourcesRunnableKt.processResources(Aapt2ProcessResourcesRunnable.kt:76)
+	at com.android.build.gradle.internal.res.LinkApplicationAndroidResourcesTask$Companion.invokeAaptForSplit(LinkApplicationAndroidResourcesTask.kt:1060)
+	at com.android.build.gradle.internal.res.LinkApplicationAndroidResourcesTask$Companion.access$invokeAaptForSplit(LinkApplicationAndroidResourcesTask.kt:886)
+	at com.android.build.gradle.internal.res.LinkApplicationAndroidResourcesTask$TaskAction.run(LinkApplicationAndroidResourcesTask.kt:463)
+	at com.android.build.gradle.internal.profile.ProfileAwareWorkAction.execute(ProfileAwareWorkAction.kt:74)
+	at org.gradle.workers.internal.DefaultWorkerServer.execute(DefaultWorkerServer.java:68)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:64)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:61)
+	at org.gradle.internal.classloader.ClassLoaderUtils.executeInClassloader(ClassLoaderUtils.java:100)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.lambda$execute$0(NoIsolationWorkerFactory.java:61)
+	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:44)
+	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:41)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+	at org.gradle.workers.internal.AbstractWorker.executeWrappedInBuildOperation(AbstractWorker.java:41)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.execute(NoIsolationWorkerFactory.java:58)
+	at org.gradle.workers.internal.DefaultWorkerExecutor.lambda$submitWork$0(DefaultWorkerExecutor.java:176)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runExecution(DefaultConditionalExecutionQueue.java:194)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.access$700(DefaultConditionalExecutionQueue.java:127)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner$1.run(DefaultConditionalExecutionQueue.java:169)
+	at org.gradle.internal.Factories$1.create(Factories.java:33)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.lambda$withLocksAcquired$0(DefaultWorkerLeaseService.java:269)
+	at org.gradle.internal.work.ResourceLockStatistics$1.measure(ResourceLockStatistics.java:42)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocksAcquired(DefaultWorkerLeaseService.java:267)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:259)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:132)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runBatch(DefaultConditionalExecutionQueue.java:164)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.run(DefaultConditionalExecutionQueue.java:133)
+	... 2 more
+
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.2.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 16s
+59 actionable tasks: 15 executed, 44 from cache
