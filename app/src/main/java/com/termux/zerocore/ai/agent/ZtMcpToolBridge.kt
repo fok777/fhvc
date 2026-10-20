@@ -48,7 +48,7 @@ object ZtMcpToolBridge {
 
     enum class Mode { OFF, INLINE, META }
 
-    internal class Entry(
+    class Entry(
         val generatedName: String,
         val serverId: String,
         val serverAlias: String,
@@ -98,7 +98,7 @@ object ZtMcpToolBridge {
                 .put("parameters", entry.schema)
         )
 
-    private fun metaListTool(entries: Entry): JSONObject = JSONObject()
+    private fun metaListTool(entries: List<Entry>): JSONObject = JSONObject()
         .put("type", "function")
         .put(
             "function",

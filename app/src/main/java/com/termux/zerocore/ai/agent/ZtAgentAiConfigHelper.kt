@@ -14,6 +14,7 @@ object ZtAgentAiConfigHelper {
 
     // ─── 死循环守卫 / 上下文预算（存通用 KV，避免改动 ZTUserBean 结构） ───────
     private const val KEY_LOOP_GUARD = "zt_agent_loop_guard"
+    private const val KEY_CONTEXT_AGING = "zt_agent_context_aging"
     private const val KEY_BUDGET_CHARS = "zt_agent_budget_chars"
     private const val KEY_TOOL_RESULT_CHARS = "zt_agent_tool_result_chars"
     private const val KEY_SUBAGENT = "zt_agent_subagent_enabled"
@@ -293,6 +294,29 @@ object ZtAgentAiConfigHelper {
 
     // ─── 上下文预算 ────────────────────────────────────────────────────────
 
+    fun isContextAgingEnabled(): Boolean {
+        return readStringPref(KEY_CONTEXT_AGING)?.let { it == "1" } ?: true
+    }
+
+    fun setContextAgingEnabled(enabled: Boolean) {
+        SaveData.saveStringOther(KEY_CONTEXT_AGING, if (enabled) "1" else "0")
+    }
+
+    /**
+     * 老化参数按当前模型的上下文窗口缩放：窗口越小，老化越激进。
+     */
+    fun contextAging(): ZtContextAging.AgingConfig {
+        val scale = modelScale()
+        val fresh = (6.0 / scale).toInt().coerceIn(2, 8)
+        val aged = (24.0 / scale).toInt().coerceIn(8, 32)
+        return ZtContextAging.AgingConfig(
+            freshTurns = fresh,
+            agedTurns = aged,
+            agedToolChars = (900.0 / scale).toInt().coerceIn(200, 1_500),
+            ancientToolChars = (160.0 / scale).toInt().coerceIn(60, 400)
+        )
+    }
+
     fun contextBudget(): ZtAgentContextBudget.BudgetConfig {
         val maxTool = readIntPref(KEY_TOOL_RESULT_CHARS) ?: 8_000
         val toolChars = if (maxTool in TOOL_RESULT_CHAR_OPTIONS) maxTool else 8_000
@@ -322,6 +346,16 @@ object ZtAgentAiConfigHelper {
         // 混合语境下 token→字符 的保守换算：约 2.5 字符/token。
         val chars = (context * 0.75 * 2.5).toInt()
         return chars.coerceIn(40_000, 320_000)
+    }
+
+    /**
+     * 上下文窗口相对 128K 的缩放系数：小窗口模型老化更激进，大窗口可以宽松些。
+     * 返回值下限 0.5、上限 4.0，避免极端模型把参数推到不可用。
+     */
+    private fun modelScale(): Double {
+        val context = activeModel().contextLength
+        if (context <= 0) return 1.0
+        return (context / 128_000.0).coerceIn(0.5, 4.0)
     }
 
     fun saveContextBudget(maxPromptChars: Int, maxToolResultChars: Int) {

@@ -74,8 +74,30 @@ class ZtAgentLoopGuard(initialConfig: ZtLoopConfig = ZtLoopConfig()) {
     companion object {
         private const val TAG = "ZtAgentLoopGuard"
 
-        /** 主会话使用的共享实例；子智能体各自 new 一个，避免互相污染滑动窗口。 */
-        val default = ZtAgentLoopGuard()
+        /** 纯展示性字段不参与哈希，否则模型每次微调标题就会让哈希失效。 */
+        private val ARGS_HASH_IGNORED_KEYS: Set<String> = setOf("tool_title", "label")
+
+        private val UNKNOWN_TOOL_RE_1 = Regex(
+            """unknown tool[:\s]+["'`]?([a-zA-Z0-9_.\-]+)["'`]?""",
+            RegexOption.IGNORE_CASE
+        )
+        private val UNKNOWN_TOOL_RE_2 = Regex(
+            """tool\s+["'`]?([a-zA-Z0-9_.\-]+)["'`]?\s+(?:not found|is not available)""",
+            RegexOption.IGNORE_CASE
+        )
+        private val UNKNOWN_TOOL_RE_BACKTICK = Regex(
+            """unknown\s+tool[^\n]*?[`'"]([a-zA-Z0-9_.\-]+)[`'"]""",
+            RegexOption.IGNORE_CASE
+        )
+
+        /**
+         * 主会话使用的共享实例；子智能体各自 new 一个，避免互相污染滑动窗口。
+         * 用 lazy 是因为它就在 companion 内部 —— 直接 `= ZtAgentLoopGuard()` 会让
+         * companion 的初始化与实例构造互相纠缠。
+         */
+        val default: ZtAgentLoopGuard by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+            ZtAgentLoopGuard()
+        }
     }
 
     @Volatile
@@ -410,23 +432,5 @@ class ZtAgentLoopGuard(initialConfig: ZtLoopConfig = ZtLoopConfig()) {
         val md = MessageDigest.getInstance("SHA-256")
         val bytes: ByteArray = md.digest(s.toByteArray(Charsets.UTF_8))
         return bytes.joinToString("") { "%02x".format(it) }
-    }
-
-    companion object {
-        /** 纯展示性字段不参与哈希，否则模型每次微调标题就会让哈希失效。 */
-        private val ARGS_HASH_IGNORED_KEYS: Set<String> = setOf("tool_title", "label")
-
-        private val UNKNOWN_TOOL_RE_1 = Regex(
-            """unknown tool[:\s]+["'`]?([a-zA-Z0-9_.\-]+)["'`]?""",
-            RegexOption.IGNORE_CASE
-        )
-        private val UNKNOWN_TOOL_RE_2 = Regex(
-            """tool\s+["'`]?([a-zA-Z0-9_.\-]+)["'`]?\s+(?:not found|is not available)""",
-            RegexOption.IGNORE_CASE
-        )
-        private val UNKNOWN_TOOL_RE_BACKTICK = Regex(
-            """unknown\s+tool[^\n]*?[`'"]([a-zA-Z0-9_.\-]+)[`'"]""",
-            RegexOption.IGNORE_CASE
-        )
     }
 }

@@ -58,7 +58,7 @@ object ZtAgentAiToolExecutor {
             if (!ZtAgentAiConfigHelper.isSubAgentEnabled()) {
                 return "Error: sub-agents are disabled. Enable them in Agent Hub → Sub-agents."
             }
-            return runner.format(runner.run(ZtSubAgentRunner.parse(toolCall.arguments)))
+            return ZtSubAgentRunner.format(runner.run(ZtSubAgentRunner.parse(toolCall.arguments)))
         }
         if (toolCall.name in configToolNames) {
             if (!ztControlEnabled) {

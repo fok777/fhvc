@@ -604,7 +604,7 @@ object ZtModelRegistry {
         override fun matches(token: String): Boolean = regex.matches(token)
     }
 
-    private interface ZtTokenMatcher {
+    internal interface ZtTokenMatcher {
         fun score(modelId: String, tokens: List<String>): Int?
     }
 

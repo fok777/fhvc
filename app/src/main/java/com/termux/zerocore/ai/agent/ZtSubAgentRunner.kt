@@ -200,6 +200,9 @@ class ZtSubAgentRunner(
                     )
                 }
                 // 子任务的上下文也要裁，否则几轮工具结果就能把窗口塞满。
+                if (ZtAgentAiConfigHelper.isContextAgingEnabled()) {
+                    ZtContextAging.age(messages, ZtAgentAiConfigHelper.contextAging())
+                }
                 ZtAgentContextBudget.trim(messages, ZtAgentAiConfigHelper.contextBudget())
             }
             return SubResult(
