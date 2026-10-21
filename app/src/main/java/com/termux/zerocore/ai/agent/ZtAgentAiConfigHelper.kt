@@ -19,6 +19,8 @@ object ZtAgentAiConfigHelper {
     private const val KEY_ENDPOINT_RPM = "zt_agent_endpoint_rpm"
     private const val KEY_ENDPOINT_CONCURRENCY = "zt_agent_endpoint_concurrency"
     private const val KEY_ENDPOINT_TOKEN_UNLIMITED = "zt_agent_endpoint_token_unlimited"
+    private const val KEY_OMNIROUTE_PORT = "zt_agent_omniroute_port"
+    private const val KEY_KEYLESS = "zt_agent_keyless"
     private const val KEY_BUDGET_CHARS = "zt_agent_budget_chars"
     private const val KEY_TOOL_RESULT_CHARS = "zt_agent_tool_result_chars"
     private const val KEY_SUBAGENT = "zt_agent_subagent_enabled"
@@ -383,6 +385,27 @@ object ZtAgentAiConfigHelper {
         )
     }
 
+    /** 本机 OmniRoute 网关端口。 */
+    fun omniRoutePort(): Int =
+        readIntPref(KEY_OMNIROUTE_PORT)?.coerceIn(1024, 65535) ?: ZtOmniRouteManager.DEFAULT_PORT
+
+    fun saveOmniRoutePort(port: Int) {
+        SaveData.saveStringOther(
+            KEY_OMNIROUTE_PORT,
+            port.coerceIn(1024, 65535).toString()
+        )
+    }
+
+    /**
+     * 免密端点：请求不带 Authorization 头。
+     * 有些网关带任何 bearer 都返回 401，所以这个开关不是可选项。
+     */
+    fun isKeyless(): Boolean = readStringPref(KEY_KEYLESS) == "1"
+
+    fun saveKeyless(keyless: Boolean) {
+        SaveData.saveStringOther(KEY_KEYLESS, if (keyless) "1" else "0")
+    }
+
     fun saveEndpointOverrides(rpm: Int?, concurrency: Int?, tokenUnlimited: Boolean?) {
         rpm?.let { SaveData.saveStringOther(KEY_ENDPOINT_RPM, it.coerceIn(1, 10_000).toString()) }
         concurrency?.let {
@@ -490,7 +513,9 @@ object ZtAgentAiConfigHelper {
 
     fun isConfigured(): Boolean {
         val config = loadActiveConfig()
-        return config.apiUrl.isNotBlank() && config.apiKey.isNotBlank() && config.model.isNotBlank()
+        if (config.apiUrl.isBlank() || config.model.isBlank()) return false
+        // 免密端点不要求 key
+        return isKeyless() || config.apiKey.isNotBlank()
     }
 
     private fun applyCachedProvider(bean: ZTUserBean, provider: String) {

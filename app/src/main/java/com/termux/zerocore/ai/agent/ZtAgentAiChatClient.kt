@@ -61,6 +61,9 @@ class ZtAgentAiChatClient(
     /** 老配置可能只存到 /v1，请求前兜底补全一次。 */
     private fun endpointUrl(): String = ZtAgentAiConfigHelper.normalizeEndpointUrl(config.apiUrl)
 
+    /** 免密端点不能带 Authorization 头，否则有些网关直接 401。 */
+    private val keyless: Boolean = ZtAgentAiConfigHelper.isKeyless()
+
     private fun limiter(): ZtRateLimiter {
         val p = profile
         val cached = limiterCache[p.id]
@@ -154,7 +157,7 @@ class ZtAgentAiChatClient(
         val body = bodyJson.toRequestBody(JSON_MEDIA_TYPE)
         val request = Request.Builder()
             .url(endpointUrl())
-            .addHeader("Authorization", "Bearer ${config.apiKey.trim()}")
+            .apply { if (!keyless) addHeader("Authorization", "Bearer ${config.apiKey.trim()}") }
             .addHeader("Content-Type", "application/json")
             .post(body)
             .build()
@@ -225,7 +228,7 @@ class ZtAgentAiChatClient(
             val body = bodyJson.toRequestBody(JSON_MEDIA_TYPE)
             val request = Request.Builder()
                 .url(endpointUrl())
-                .addHeader("Authorization", "Bearer ${config.apiKey.trim()}")
+                .apply { if (!keyless) addHeader("Authorization", "Bearer ${config.apiKey.trim()}") }
                 .addHeader("Content-Type", "application/json")
                 .post(body)
                 .build()

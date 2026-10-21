@@ -49,6 +49,8 @@ class ZtAgentHubActivity : BaseTitleActivity() {
     }
     private val guardSwitch by lazy { findViewById<SwitchCompat>(R.id.hub_guard_switch) }
     private val guardSummary by lazy { findViewById<TextView>(R.id.hub_guard_summary) }
+    private val omniCard by lazy { findViewById<CardView>(R.id.hub_card_omniroute) }
+    private val omniSummary by lazy { findViewById<TextView>(R.id.hub_omniroute_summary) }
     private val endpointCard by lazy { findViewById<CardView>(R.id.hub_card_endpoint) }
     private val endpointSummary by lazy { findViewById<TextView>(R.id.hub_endpoint_summary) }
     private val agingSwitch by lazy { findViewById<SwitchCompat>(R.id.hub_aging_switch) }
@@ -80,6 +82,7 @@ class ZtAgentHubActivity : BaseTitleActivity() {
         bindGuard()
         bindEndpoint()
         bindAging()
+        bindOmniRoute()
         refreshAll()
     }
 
@@ -251,6 +254,7 @@ class ZtAgentHubActivity : BaseTitleActivity() {
         refreshGuard()
         refreshEndpoint()
         refreshAging()
+        refreshOmniRoute()
         val config = ZtAgentAiConfigHelper.loadActiveConfig()
         statusView.text = if (ZtAgentAiConfigHelper.isConfigured()) {
             "已配置 · ${config.provider} / ${config.model}"
@@ -262,6 +266,19 @@ class ZtAgentHubActivity : BaseTitleActivity() {
     // ═════════════════════════════════════════════════════════════════════════
     // 以下子页面全部用代码搭 UI
     // ═════════════════════════════════════════════════════════════════════════
+
+    // ─── OmniRoute 本地网关 ──────────────────────────────────────────────────
+
+    private fun bindOmniRoute() {
+        omniCard.setOnClickListener {
+            startActivity(Intent(this, ZtGatewayActivity::class.java))
+        }
+    }
+
+    private fun refreshOmniRoute() {
+        val count = ZtLocalGateways.BUILTIN.size + ZtLocalGateways.DIRECT_PRESETS.size
+        omniSummary.text = "OmniRoute · Zen Proxy · freellmpool 等 $count 个来源，含免密直连" 
+    }
 
     // ─── 端点与限速 ──────────────────────────────────────────────────────────
 
