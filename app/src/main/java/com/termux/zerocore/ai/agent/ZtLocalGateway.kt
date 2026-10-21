@@ -46,6 +46,48 @@ data class ZtLocalGateway(
     fun dashUrl(portOverride: Int = port): String = "http://127.0.0.1:$portOverride"
 }
 
+/**
+ * GitHub 直连不通时的镜像前缀。
+ *
+ * 国内网络下 github.com:443 经常超时，git clone / npm 都会失败，
+ * 所以克隆地址不能写死，得能换前缀重试。
+ */
+object ZtGitMirror {
+
+    /** 每项为「显示名 → 前缀」，空串表示直连。拼法是 前缀 + 原始 url。 */
+    val OPTIONS: List<Pair<String, String>> = listOf(
+        "直连 github.com" to "",
+        "ghfast" to "https://ghfast.top/",
+        "gh-proxy" to "https://gh-proxy.com/",
+        "gitmirror" to "https://hub.gitmirror.com/",
+        "gh-proxy.net" to "https://gh-proxy.net/"
+    )
+
+    private const val KEY = "zt_git_mirror"
+
+    fun current(): String = OPTIONS.getOrNull(readIndex())?.second ?: ""
+
+    fun currentLabel(): String = OPTIONS.getOrNull(readIndex())?.first ?: OPTIONS[0].first
+
+    fun saveIndex(index: Int) {
+        runCatching {
+            com.example.xh_lib.utils.SaveData.saveStringOther(
+                KEY, index.coerceIn(0, OPTIONS.lastIndex).toString()
+            )
+        }
+    }
+
+    private fun readIndex(): Int = runCatching {
+        com.example.xh_lib.utils.SaveData.getStringOther(KEY)?.toIntOrNull()
+    }.getOrNull() ?: 0
+
+    /** 把原始 GitHub 地址套上当前镜像前缀。 */
+    fun apply(rawUrl: String): String {
+        val prefix = current()
+        return if (prefix.isEmpty()) rawUrl else prefix + rawUrl
+    }
+}
+
 object ZtLocalGateways {
 
     private const val PKG = "pkg install -y"
@@ -81,7 +123,7 @@ object ZtLocalGateways {
             installSteps = listOf(
                 "安装 Node 与 git" to "$PKG nodejs git",
                 "拉取源码" to "rm -rf \$HOME/zen-proxy && " +
-                    "git clone --depth 1 https://github.com/12errh/zen-proxy.git \$HOME/zen-proxy"
+                    "git clone --depth 1 %MIRROR%https://github.com/12errh/zen-proxy.git \$HOME/zen-proxy"
             ),
             startCommand = "cd \$HOME/zen-proxy && " +
                 "export PATH=$PRE:\$PATH; " +
@@ -118,7 +160,7 @@ object ZtLocalGateways {
             installSteps = listOf(
                 "安装 Node 与 git" to "$PKG nodejs git",
                 "拉取仓库" to "rm -rf \$HOME/our-free-model && " +
-                    "git clone --depth 1 https://github.com/Ebony-Vinyl/dsh-our-free-model.git " +
+                    "git clone --depth 1 %MIRROR%https://github.com/Ebony-Vinyl/dsh-our-free-model.git " +
                     "\$HOME/our-free-model",
                 "安装依赖" to "cd \$HOME/our-free-model/packages/standalone && " +
                     "export PATH=$PRE:\$PATH && npm install"
@@ -188,6 +230,20 @@ object ZtLocalGateways {
     /** 免密的直连端点，不需要装任何东西。 */
     val DIRECT_PRESETS: List<ZtLocalGateway> = listOf(
         ZtLocalGateway(
+            id = "direct-zen",
+            name = "OpenCode Zen 免费层",
+            summary = "免 key 匿名直连，多个 -free 模型，工具调用与推理都支持",
+            installSteps = emptyList(),
+            startCommand = "",
+            processPattern = "",
+            port = 0,
+            basePath = "",
+            defaultModel = "deepseek-v4-flash-free",
+            keyless = true,
+            notes = "凭证是字面量 public，无需注册。" +
+                "上游会校验客户端指纹，偶发 FreeTierError 属正常；免费额度按出口 IP 共享。"
+        ),
+        ZtLocalGateway(
             id = "direct-kilo",
             name = "Kilo 免费池",
             summary = "直连公共网关，200 次/小时，模型 kilo-auto/free 自动选",
@@ -195,6 +251,7 @@ object ZtLocalGateways {
             startCommand = "",
             processPattern = "",
             port = 0,
+            basePath = "",
             defaultModel = "kilo-auto/free",
             keyless = true,
             notes = "上游声明 prompt 可能被记录用于改进服务，敏感内容不要用。"
@@ -202,26 +259,28 @@ object ZtLocalGateways {
         ZtLocalGateway(
             id = "direct-vlmrun",
             name = "VLM Run 匿名层",
-            summary = "100 次/天，完全匿名",
+            summary = "100 次/天，完全匿名（国内常连不上）",
             installSteps = emptyList(),
             startCommand = "",
             processPattern = "",
             port = 0,
+            basePath = "",
             defaultModel = "qwen/qwen3.8-27b",
             keyless = true,
-            notes = "带任何 Authorization 头都会 401，必须免密。"
+            notes = "带任何 Authorization 头都会 401，必须免密。国内网络常超时，先测连通再用。"
         ),
         ZtLocalGateway(
             id = "direct-ovh",
             name = "OVHcloud 匿名层",
-            summary = "欧洲机房，2 RPM，适合 GDPR 场景",
+            summary = "欧洲机房，2 RPM，适合 GDPR 场景（国内常连不上）",
             installSteps = emptyList(),
             startCommand = "",
             processPattern = "",
             port = 0,
+            basePath = "",
             defaultModel = "Meta-Llama-3_3-70B-Instruct",
             keyless = true,
-            notes = "只有 2 次/分钟，仅适合低频与合规场景。"
+            notes = "只有 2 次/分钟，仅适合低频与合规场景。国内网络常超时，先测连通再用。"
         )
     )
 }
