@@ -50,7 +50,17 @@ object ZtEndpointProfiles {
             noScheme.substringBefore("/").substringBefore(":")
         }.getOrDefault("")
 
+        val isLocal = host == "127.0.0.1" || host == "localhost" ||
+            host == "0.0.0.0" || host == "[::1]"
+
         return when {
+            isLocal -> ZtEndpointProfile(
+                id = "local-gateway",
+                rpm = 600,
+                maxConcurrency = 4,
+                retryOn429 = false
+            )
+
             host.contains("agnes-ai") -> ZtEndpointProfile(
                 id = "agnes-free",
                 rpm = 10,

@@ -151,6 +151,14 @@
             android:exported="false"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
 
+        <activity android:name=".zerocore.ai.agent.ZtOmniRouteActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
+
+        <activity android:name=".zerocore.ai.agent.ZtGatewayActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
+
         <activity android:name=".zerocore.ai.agent.ZtAgentAiSkillsActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
