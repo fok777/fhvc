@@ -1,0 +1,117 @@
+name: Build Test
+
+# 构建测试分支专用：push 到 build-test 即触发，也可以手动跑。
+# 只编 Debug，不签名、不发版，单纯验证源码能编译通过。
+
+on:
+  push:
+    branches: [build-test]
+  workflow_dispatch:
+    inputs:
+      arch:
+        description: '目标架构'
+        required: true
+        type: choice
+        default: universal
+        options:
+          - universal
+          - arm
+          - arm64
+          - x86
+          - x86_64
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    env:
+      JAVA_VERSION: "17"
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: 配置 JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: 配置 Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          add-job-summary: always
+
+      - name: 缓存 Bootstrap
+        uses: actions/cache@v5
+        with:
+          path: app/src/main/cpp/bootstrap-*.zip
+          key: bootstrap-${{ hashFiles('app/build.gradle') }}
+          restore-keys: bootstrap-
+
+      - name: 给 gradlew 执行权限
+        run: chmod +x gradlew
+
+      - name: 编译 Debug APK (${{ inputs.arch || 'universal' }})
+        run: |
+          set +e
+          ./gradlew --build-cache --stacktrace :app:assembleDebug \
+            -Darch=${{ inputs.arch || 'universal' }} 2>&1 | tee build.log
+          code=${PIPESTATUS[0]}
+          echo "GRADLE_EXIT=$code" >> $GITHUB_ENV
+          exit $code
+
+      - name: 回传完整构建日志
+        if: failure()
+        run: |
+          git config user.email "action@github.com"
+          git config user.name "build-test"
+          git add -f build.log
+          git commit -q -m "build log [skip ci]"
+          git push origin HEAD:build-test
+
+      - name: 上传构建日志
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-log
+          path: build.log
+          if-no-files-found: ignore
+
+      - name: 上传 APK
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: ZeroTermux-debug-${{ inputs.arch || 'universal' }}
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: ignore
+
+      - name: 发布 APK 到 Releases
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          APK=$(ls app/build/outputs/apk/debug/*.apk 2>/dev/null | head -1)
+          if [ -z "$APK" ]; then echo "no apk found"; exit 0; fi
+          echo "apk: $APK ($(du -h "$APK" | cut -f1))"
+          if gh release view build-latest >/dev/null 2>&1; then
+            gh release upload build-latest "$APK" --clobber
+          else
+            gh release create build-latest \
+              --title "ZeroTermux Debug 滚动构建" \
+              --notes "build-test 分支每次构建成功自动覆盖此 Release" \
+              --target build-test "$APK"
+          fi
