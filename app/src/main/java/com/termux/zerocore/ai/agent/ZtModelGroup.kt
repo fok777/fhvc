@@ -46,7 +46,9 @@ data class ZtModelEntry(
         .put("contextWindow", contextWindow ?: -1)
         .put("maxOutputTokens", maxOutputTokens ?: -1)
         .put("supportsReasoning", supportsReasoning ?: false)
-        .put("reasoningEffortValues", JSONArray(reasoningEffortValues ?: emptyList()))
+        .put("reasoningEffortValues", JSONArray().apply {
+            (reasoningEffortValues ?: emptyList<String>()).forEach { put(it) }
+        })
         .put("supportsVision", supportsVision ?: false)
         .put("supportsTools", supportsTools ?: false)
         .put("overrideContext", overrideContext ?: -1)
@@ -126,7 +128,7 @@ data class ZtModelGroup(
         .put("strategy", strategy)
         .put("defaultThinkingLevel", defaultThinkingLevel ?: "")
         .put("contextLimitTokens", contextLimitTokens ?: -1)
-        .put("memberIds", JSONArray(memberIds))
+        .put("memberIds", JSONArray().apply { memberIds.forEach { put(it) } })
         .put("sortOrder", sortOrder)
 
     companion object {
