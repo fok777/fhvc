@@ -97,3 +97,21 @@ jobs:
           name: ZeroTermux-debug-${{ inputs.arch || 'universal' }}
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: ignore
+
+      - name: 发布 APK 到 Releases
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          APK=$(ls app/build/outputs/apk/debug/*.apk 2>/dev/null | head -1)
+          if [ -z "$APK" ]; then echo "no apk found"; exit 0; fi
+          echo "apk: $APK ($(du -h "$APK" | cut -f1))"
+          if gh release view build-latest >/dev/null 2>&1; then
+            gh release upload build-latest "$APK" --clobber
+          else
+            gh release create build-latest \
+              --title "ZeroTermux Debug 滚动构建" \
+              --notes "build-test 分支每次构建成功自动覆盖此 Release" \
+              --target build-test "$APK"
+          fi
