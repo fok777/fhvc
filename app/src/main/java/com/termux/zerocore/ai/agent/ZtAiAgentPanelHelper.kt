@@ -104,6 +104,7 @@ class ZtAiAgentPanelHelper(
             openAgentSettings()
         }
         modelChip?.setOnClickListener { showModelSwitcher() }
+        bindModelSwitchNotifications()
         refreshModelChip()
         panelCard.isFocusable = false
         panelCard.isFocusableInTouchMode = false
@@ -607,6 +608,18 @@ class ZtAiAgentPanelHelper(
     // ─── 模型切换 ──────────────────────────────────────────────────────────
 
     /** 标题栏上的模型名，点一下就能换，不用进设置页。 */
+    /**
+     * 组内 fallback 发生后，标题栏要跟着变，否则用户不知道换了模型。
+     */
+    private fun bindModelSwitchNotifications() {
+        ZtAgentAiChatClient.onModelSwitched = { modelId ->
+            hostActivity.runOnUiThread {
+                refreshModelChip()
+                android.util.Log.i("ZtAgentPanel", "switched to $modelId")
+            }
+        }
+    }
+
     private fun refreshModelChip() {
         val chip = modelChip ?: return
         val group = ZtModelGroupStore.activeGroup()

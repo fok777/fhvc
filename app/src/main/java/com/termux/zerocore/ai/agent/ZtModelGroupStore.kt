@@ -14,6 +14,7 @@ object ZtModelGroupStore {
     private const val KEY_GROUPS = "zt_model_groups_json"
     private const val KEY_ENTRIES = "zt_model_entries_json"
     private const val KEY_ACTIVE = "zt_model_active_group"
+    private const val KEY_LAST_GOOD = "zt_model_last_good"
 
     fun loadGroups(): List<ZtModelGroup> {
         val raw = com.example.xh_lib.utils.SaveData.getStringOther(KEY_GROUPS)
@@ -60,6 +61,21 @@ object ZtModelGroupStore {
 
     fun saveActiveGroup(id: String) {
         com.example.xh_lib.utils.SaveData.saveStringOther(KEY_ACTIVE, id)
+    }
+
+    /**
+     * 上一个请求成功的成员。
+     * 下次优先试它，避免每次都从队首那个已经打满的开始撞。
+     */
+    fun lastGoodModelId(): String? {
+        val group = activeGroup() ?: return null
+        val raw = com.example.xh_lib.utils.SaveData.getStringOther(KEY_LAST_GOOD).orEmpty()
+        val ids = group.memberIds
+        return raw.takeIf { it in ids }
+    }
+
+    fun markGood(modelId: String) {
+        com.example.xh_lib.utils.SaveData.saveStringOther(KEY_LAST_GOOD, modelId)
     }
 
     fun findGroup(id: String): ZtModelGroup? =
@@ -145,5 +161,6 @@ object ZtModelGroupStore {
         saveGroups(emptyList())
         saveEntries(emptyMap())
         saveActiveGroup("")
+        com.example.xh_lib.utils.SaveData.saveStringOther(KEY_LAST_GOOD, "")
     }
 }
