@@ -57,6 +57,7 @@ class ZtAiAgentPanelHelper(
     private val input: EditText = panelHost.findViewById(R.id.ai_agent_panel_input)
     private val sendButton: TextView = panelHost.findViewById(R.id.ai_agent_panel_send)
     private val panelStopBar: View? = panelHost.findViewById(R.id.ai_agent_panel_stop_bar)
+    private val modelChip: TextView? = panelHost.findViewById(R.id.ai_agent_panel_model)
 
     private val conversationHistory = ZtAgentAiChatStore.load()
     private var chatClient: ZtAgentAiChatClient? = null
@@ -102,6 +103,8 @@ class ZtAiAgentPanelHelper(
         panelHost.findViewById<View>(R.id.ai_agent_panel_settings).setOnClickListener {
             openAgentSettings()
         }
+        modelChip?.setOnClickListener { showModelSwitcher() }
+        refreshModelChip()
         panelCard.isFocusable = false
         panelCard.isFocusableInTouchMode = false
         sendButton.setOnClickListener { onSendClicked() }
@@ -599,6 +602,74 @@ class ZtAiAgentPanelHelper(
         )
         scrollToBottom()
         startReply(assistantView)
+    }
+
+    // ─── 模型切换 ──────────────────────────────────────────────────────────
+
+    /** 标题栏上的模型名，点一下就能换，不用进设置页。 */
+    private fun refreshModelChip() {
+        val chip = modelChip ?: return
+        val group = ZtModelGroupStore.activeGroup()
+        val label = when {
+            group != null -> {
+                val member = ZtModelGroupStore.membersOf(group).firstOrNull()
+                if (group.memberIds.size > 1) "${group.name} · ${group.memberIds.size}"
+                else member?.displayName ?: group.name
+            }
+            else -> ZtAgentAiConfigHelper.loadActiveConfig().model.trim()
+        }
+        chip.text = label.ifBlank { "选择模型" }
+    }
+
+    private fun showModelSwitcher() {
+        val groups = ZtModelGroupStore.loadGroups()
+        if (groups.isEmpty()) {
+            showModelPickerFromCatalog()
+            return
+        }
+        val items = buildList {
+            groups.forEach { g ->
+                add(if (g.id == ZtModelGroupStore.activeGroupId()) "✓ ${g.name}" else g.name)
+            }
+            add("从服务商目录选一个…")
+            add("管理模型组…")
+        }.toTypedArray()
+        android.app.AlertDialog.Builder(hostActivity)
+            .setTitle("当前模型")
+            .setItems(items) { _, which ->
+                when {
+                    which < groups.size -> {
+                        ZtModelGroupStore.saveActiveGroup(groups[which].id)
+                        refreshModelChip()
+                    }
+                    which == groups.size -> showModelPickerFromCatalog()
+                    else -> hostActivity.startActivity(
+                        android.content.Intent(hostActivity, ZtModelGroupActivity::class.java)
+                    )
+                }
+            }
+            .setNegativeButton("关闭", null)
+            .show()
+    }
+
+    /** 直接把选中的模型写进配置模型字段（没建组时的快捷路径）。 */
+    private fun showModelPickerFromCatalog() {
+        val config = ZtAgentAiConfigHelper.loadActiveConfig()
+        ZtModelPickerDialog.show(
+            context = hostActivity,
+            apiUrl = config.apiUrl,
+            apiKey = config.apiKey,
+            currentId = config.model.trim(),
+            onPicked = object : ZtModelPickerDialog.OnModelPicked {
+                override fun onPicked(model: ZtModelInfo) {
+                    ZtAgentAiConfigHelper.saveActiveFields(
+                        config.apiUrl, config.apiKey, model.id, config.systemPrompt
+                    )
+                    ZtModelGroupStore.syncFromCatalog(listOf(model))
+                    refreshModelChip()
+                }
+            }
+        )
     }
 
     private fun renderMarkdown(textView: TextView, markdown: String, scroll: Boolean = true) {

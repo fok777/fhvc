@@ -126,7 +126,7 @@ import com.termux.zerocore.config.mainmenu.view.adapter.MainMenuPackageAdapter;
 import com.termux.zerocore.dialog.YesNoDialog;
 import com.termux.zerocore.config.other.ZTGitHubVersion;
 import com.termux.zerocore.config.ztcommand.config.XmlMenuConfig;
-import com.termux.zerocore.ai.deepseek.markdown.MarkDownAPI;
+import com.termux.zerocore.ai.markdown.MarkDownAPI;
 import com.termux.zerocore.dialog.BeautifySettingDialog;
 import com.termux.zerocore.dialog.CommonCommandsDialog;
 import com.termux.zerocore.dialog.DownLoadDialogBoom;
@@ -2348,25 +2348,9 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         // 1. 先移除可能存在的所有 Fragment
         Fragment fileListFragment = getSupportFragmentManager()
             .findFragmentByTag("ZFileListFragment");
-        Fragment deepSeekFragment = getSupportFragmentManager()
-            .findFragmentByTag("DeepSeekTransitFragment");
-        Fragment deepSeekMainFragment = getSupportFragmentManager()
-            .findFragmentByTag("DeepSeekMainFragment");
-        Fragment llmFragment = getSupportFragmentManager()
-            .findFragmentByTag("LLMMainFragment");
-
         if (fileListFragment != null) {
             fragmentTransaction.remove(fileListFragment);
             LogUtils.e(TAG, "Removed existing ZFileListFragment");
-        }
-        if (deepSeekFragment != null) {
-            fragmentTransaction.remove(deepSeekFragment);
-        }
-        if (deepSeekMainFragment != null) {
-            fragmentTransaction.remove(deepSeekMainFragment);
-        }
-        if (llmFragment != null) {
-            fragmentTransaction.remove(llmFragment);
         }
 
         // 2. 立即提交移除操作，确保状态被清理

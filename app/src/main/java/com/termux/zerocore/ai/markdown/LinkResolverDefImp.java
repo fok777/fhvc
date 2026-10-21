@@ -1,4 +1,4 @@
-package com.termux.zerocore.ai.deepseek.markdown;
+package com.termux.zerocore.ai.markdown;
 
 import android.content.ActivityNotFoundException;
 import android.content.Context;

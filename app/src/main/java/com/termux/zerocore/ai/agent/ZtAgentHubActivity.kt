@@ -49,6 +49,8 @@ class ZtAgentHubActivity : BaseTitleActivity() {
     }
     private val guardSwitch by lazy { findViewById<SwitchCompat>(R.id.hub_guard_switch) }
     private val guardSummary by lazy { findViewById<TextView>(R.id.hub_guard_summary) }
+    private val modelGroupCard by lazy { findViewById<CardView>(R.id.hub_card_model_group) }
+    private val modelGroupSummary by lazy { findViewById<TextView>(R.id.hub_model_group_summary) }
     private val omniCard by lazy { findViewById<CardView>(R.id.hub_card_omniroute) }
     private val omniSummary by lazy { findViewById<TextView>(R.id.hub_omniroute_summary) }
     private val endpointCard by lazy { findViewById<CardView>(R.id.hub_card_endpoint) }
@@ -266,6 +268,24 @@ class ZtAgentHubActivity : BaseTitleActivity() {
     // ═════════════════════════════════════════════════════════════════════════
     // 以下子页面全部用代码搭 UI
     // ═════════════════════════════════════════════════════════════════════════
+
+    // ─── 模型组 ────────────────────────────────────────────────────────────
+
+    private fun bindModelGroups() {
+        modelGroupCard.setOnClickListener {
+            startActivity(Intent(this, ZtModelGroupActivity::class.java))
+        }
+    }
+
+    private fun refreshModelGroups() {
+        val groups = ZtModelGroupStore.loadGroups()
+        val active = ZtModelGroupStore.activeGroup()
+        modelGroupSummary.text = when {
+            groups.isEmpty() -> "未配置 · 组可容纳多个模型并自动 fallback"
+            active != null -> "${active.name} · ${groups.size} 个组"
+            else -> "${groups.size} 个组"
+        }
+    }
 
     // ─── OmniRoute 本地网关 ──────────────────────────────────────────────────
 

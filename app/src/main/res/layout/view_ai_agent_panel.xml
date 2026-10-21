@@ -74,6 +74,22 @@
                     android:contentDescription="@string/zt_agent_ai_skills_title"
                     android:padding="6dp"
                     android:src="@drawable/ic_agent_skill" />
+
+                <TextView
+                    android:id="@+id/ai_agent_panel_model"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    android:background="@drawable/shape_agent_msg_assistant"
+                    android:ellipsize="middle"
+                    android:maxWidth="120dp"
+                    android:maxLines="1"
+                    android:paddingStart="8dp"
+                    android:paddingTop="4dp"
+                    android:paddingEnd="8dp"
+                    android:paddingBottom="4dp"
+                    android:textColor="@color/white"
+                    android:textSize="11sp" />
             </LinearLayout>
         </RelativeLayout>
     </androidx.cardview.widget.CardView>

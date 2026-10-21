@@ -12,15 +12,12 @@ import com.termux.zerocore.activity.EditTextActivity
 import com.termux.zerocore.activity.FontActivity
 import com.termux.zerocore.activity.SwitchActivity
 import com.termux.zerocore.activity.WebViewActivity
-import com.termux.zerocore.ai.activity.MainAiSettings
 import com.termux.zerocore.ai.agent.ZtAgentAiSettingsActivity
 import com.termux.zerocore.ai.agent.ZtAgentAiSkillsActivity
-import com.termux.zerocore.ai.deepseek.activity.ZeroTermuxDeepSeekKeyActivity
-import com.termux.zerocore.ai.deepseek.activity.ZeroTermuxDeepSeekSettingsActivity
+import com.termux.zerocore.ai.agent.ZtAgentHubActivity
 import com.termux.zerocore.config.ztcommand.activity.SocketBaseActivity
 import com.termux.zerocore.developer.DeveloperActivity
 import com.termux.zerocore.guide.TermuxGuideActivity
-import com.termux.zerocore.llm.activity.ZeroTermuxLLMSettingsActivity
 import com.termux.zerocore.scrcpy.MainActivity
 import com.termux.zerocore.settings.ContainerSettingsMainActivity
 import com.termux.zerocore.settings.LeftMenuSettingsActivity
@@ -130,12 +127,9 @@ object ZtPageNavigationRegistry {
         PageEntry("left_menu_settings", R.string.zt_nav_page_left_menu_settings, LeftMenuSettingsActivity::class.java),
         PageEntry("menu_update_source", R.string.zt_nav_page_menu_update_source, MenuUpdateSourceActivity::class.java),
         PageEntry("zt_developer_options", R.string.zt_nav_page_zt_developer_options, ZtDeveloperOptionsActivity::class.java),
-        PageEntry("ai_settings", R.string.zt_nav_page_ai_settings, MainAiSettings::class.java),
+        PageEntry("ai_settings", R.string.zt_nav_page_ai_settings, ZtAgentHubActivity::class.java),
         PageEntry("agent_ai_settings", R.string.zt_nav_page_agent_ai_settings, ZtAgentAiSettingsActivity::class.java),
         PageEntry("agent_skills", R.string.zt_nav_page_agent_skills, ZtAgentAiSkillsActivity::class.java),
-        PageEntry("deepseek_settings", R.string.zt_nav_page_deepseek_settings, ZeroTermuxDeepSeekSettingsActivity::class.java),
-        PageEntry("deepseek_key", R.string.zt_nav_page_deepseek_key, ZeroTermuxDeepSeekKeyActivity::class.java),
-        PageEntry("llm_settings", R.string.zt_nav_page_llm_settings, ZeroTermuxLLMSettingsActivity::class.java),
         PageEntry("termux_settings", R.string.zt_nav_page_termux_settings, SettingsActivity::class.java),
         PageEntry("zt_about", R.string.zt_nav_page_zt_about, ZTAboutActivity::class.java),
         PageEntry("zt_install", R.string.zt_nav_page_zt_install, ZTInstallActivity::class.java),

@@ -64,6 +64,13 @@ class ZtAgentAiChatClient(
     /** 免密端点不能带 Authorization 头，否则有些网关直接 401。 */
     private val keyless: Boolean = ZtAgentAiConfigHelper.isKeyless()
 
+    /**
+     * 实际发送的模型 ID。
+     * 配了模型组就取组内当前成员，否则用配置里的裸 ID。
+     */
+    private val modelId: String
+        get() = ZtModelGroupStore.resolveModelId(config.model.trim())
+
     private fun limiter(): ZtRateLimiter {
         val p = profile
         val cached = limiterCache[p.id]
@@ -311,7 +318,7 @@ class ZtAgentAiChatClient(
         val arr = JSONArray()
         messages.forEach { msg -> arr.put(messageToJson(msg)) }
         val body = JSONObject()
-            .put("model", config.model.trim())
+            .put("model", modelId)
             .put("messages", arr)
             .put("stream", stream)
         if (tools != null && tools.length() > 0) {
