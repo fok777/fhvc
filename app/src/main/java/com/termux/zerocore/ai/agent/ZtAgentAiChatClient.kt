@@ -65,11 +65,33 @@ class ZtAgentAiChatClient(
     private val keyless: Boolean = ZtAgentAiConfigHelper.isKeyless()
 
     /**
-     * 实际发送的模型 ID。
-     * 配了模型组就取组内当前成员，否则用配置里的裸 ID。
+     * 当前实际发送的模型 ID。
+     * 组内 fallback 时会逐个推进，成功后停在命中的那个。
      */
-    private val modelId: String
-        get() = ZtModelGroupStore.resolveModelId(config.model.trim())
+    private var activeModelId: String = ZtModelGroupStore.resolveModelId(config.model.trim())
+
+    /**
+     * 候选模型，按组内 fallback 顺序。
+     * 没配组时是单元素列表，行为与之前一致。
+     */
+    private fun candidates(): List<String> {
+        val group = ZtModelGroupStore.activeGroup() ?: return listOf(config.model.trim())
+        val ids = ZtModelGroupStore.membersOf(group).filter { !it.isHidden }.map { it.modelId }
+        if (ids.isEmpty()) return listOf(config.model.trim())
+        // 上一个成功的成员优先，避免每次都从头撞一遍
+        val last = ZtModelGroupStore.lastGoodModelId()
+        if (last != null && last in ids && ids.indexOf(last) > 0) {
+            return listOf(last) + ids.filterNot { it == last }
+        }
+        return ids
+    }
+
+    /**
+     * 这个错误值不值得换组内下一个成员。
+     * 401/403 是凭证问题、400/422 是请求问题，换模型没用，只会白烧配额。
+     */
+    private fun worthSwitchingMember(code: Int): Boolean =
+        code == -1 || code == 404 || code == 429 || code in 500..599
 
     private fun limiter(): ZtRateLimiter {
         val p = profile
@@ -105,28 +127,44 @@ class ZtAgentAiChatClient(
         }
         var finalResult: CompletionResult? = null
         try {
-            var attempt = 0
-            while (finalResult == null) {
-                val outcome = callOnce(messages, tools)
-                if (outcome.code == 0) {
-                    limiter.onSuccess()
-                    finalResult = outcome.result
-                    break
+            val queue = candidates()
+            for ((index, candidate) in queue.withIndex()) {
+                activeModelId = candidate
+                if (queue.size > 1) {
+                    android.util.Log.i(TAG, "group member ${index + 1}/${queue.size}: $candidate")
                 }
-                limiter.onFailure(outcome.code)
-                val retryable = outcome.code == 429 || outcome.code in 500..599
-                if (!retryable || !profile.retryOn429 || attempt >= MAX_RETRIES) {
-                    finalResult = outcome.result
-                    break
+                var attempt = 0
+                while (finalResult == null) {
+                    val outcome = callOnce(messages, tools)
+                    if (outcome.code == 0) {
+                        limiter.onSuccess()
+                        ZtModelGroupStore.markGood(candidate)
+                        finalResult = outcome.result
+                        break
+                    }
+                    limiter.onFailure(outcome.code)
+                    val retryable = outcome.code == 429 || outcome.code in 500..599
+                    if (!retryable || !profile.retryOn429 || attempt >= MAX_RETRIES) {
+                        // 组内还有下一个就换模型，否则把错误交上去
+                        if (index < queue.lastIndex && worthSwitchingMember(outcome.code)) {
+                            android.util.Log.i(TAG, "fallback: $candidate → ${queue[index + 1]}")
+                            onModelSwitched?.invoke(queue[index + 1])
+                            break
+                        }
+                        finalResult = outcome.result
+                        break
+                    }
+                    val waitMs = outcome.retryAfterMs ?: limiter.backoffMs(attempt)
+                    attempt++
+                    android.util.Log.i(TAG, "retry $attempt/$MAX_RETRIES after ${waitMs}ms (HTTP ${outcome.code})")
+                    Thread.sleep(waitMs)
+                    if (limiter.isBreakerOpen()) {
+                        // 熔断说明整个端点额度见底，换模型通常也没用
+                        finalResult = outcome.result
+                        break
+                    }
                 }
-                val waitMs = outcome.retryAfterMs ?: limiter.backoffMs(attempt)
-                attempt++
-                android.util.Log.i(TAG, "retry $attempt/$MAX_RETRIES after ${waitMs}ms (HTTP ${outcome.code})")
-                Thread.sleep(waitMs)
-                if (limiter.isBreakerOpen()) {
-                    finalResult = outcome.result
-                    break
-                }
+                if (finalResult != null) break
             }
         } finally {
             limiter.release()
@@ -227,8 +265,26 @@ class ZtAgentAiChatClient(
             postError(listener, "连续失败过多，已暂停 ${limiter.breakerRemainingMs() / 1000} 秒后重试")
             return
         }
+        startStreamAttempt(candidates(), 0, messages, stream, listener)
+    }
+
+    /**
+     * 流式请求的单次尝试。失败且组内还有下一个成员时，直接换模型再发一次——
+     * 比原地退避等 429 恢复快得多，因为不同成员的配额通常是分开的。
+     */
+    private fun startStreamAttempt(
+        queue: List<String>,
+        index: Int,
+        messages: List<ChatMessage>,
+        stream: Boolean,
+        listener: Listener
+    ) {
+        if (index >= queue.size) return
+        activeModelId = queue[index]
+        val limiter = limiter()
         // 流式请求从 UI 发起，最多等一小会儿，取不到令牌也照发，交给服务端兜底。
         val acquired = limiter.acquire(STREAM_ACQUIRE_MS)
+        val hasNext = index < queue.lastIndex
 
         try {
             val bodyJson = buildRequestBody(messages, stream, tools = null)
@@ -247,6 +303,12 @@ class ZtAgentAiChatClient(
                     limiter.onFailure(-1)
                     if (call.isCanceled()) return
                     LogUtils.e(TAG, "chat onFailure: $e")
+                    if (hasNext && worthSwitchingMember(-1)) {
+                        android.util.Log.i(TAG, "stream fallback: ${queue[index]} → ${queue[index + 1]}")
+                        onModelSwitched?.invoke(queue[index + 1])
+                        startStreamAttempt(queue, index + 1, messages, stream, listener)
+                        return
+                    }
                     postError(listener, e.message ?: "Network error")
                 }
 
@@ -264,9 +326,16 @@ class ZtAgentAiChatClient(
                     response.use { resp ->
                         if (!resp.isSuccessful) {
                             val errBody = resp.body?.string().orEmpty()
+                            if (hasNext && worthSwitchingMember(resp.code)) {
+                                android.util.Log.i(TAG, "stream fallback: ${queue[index]} → ${queue[index + 1]} (HTTP ${resp.code})")
+                                onModelSwitched?.invoke(queue[index + 1])
+                                startStreamAttempt(queue, index + 1, messages, stream, listener)
+                                return
+                            }
                             postError(listener, "HTTP ${resp.code}: $errBody")
                             return
                         }
+                        ZtModelGroupStore.markGood(queue[index])
                         val source: BufferedSource = resp.body?.source()
                             ?: run {
                                 postError(listener, "Empty response")
@@ -318,7 +387,7 @@ class ZtAgentAiChatClient(
         val arr = JSONArray()
         messages.forEach { msg -> arr.put(messageToJson(msg)) }
         val body = JSONObject()
-            .put("model", modelId)
+            .put("model", activeModelId)
             .put("messages", arr)
             .put("stream", stream)
         if (tools != null && tools.length() > 0) {
@@ -438,6 +507,13 @@ class ZtAgentAiChatClient(
 
         /** 限速器按档案 id 复用，否则每次新建 client 都会重置令牌桶。 */
         private val limiterCache = java.util.concurrent.ConcurrentHashMap<String, ZtRateLimiter>()
+
+        /**
+         * 组内切换模型时的通知，用于让界面把当前模型名跟上。
+         * 不直接引 UI，避免 client 依赖面板。
+         */
+        @Volatile
+        var onModelSwitched: ((String) -> Unit)? = null
 
         /** 供设置页展示当前端点的限制。 */
         fun profileFor(apiUrl: String): ZtEndpointProfile = ZtEndpointProfiles.fromUrl(apiUrl)
