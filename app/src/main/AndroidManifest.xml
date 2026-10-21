@@ -135,9 +135,6 @@
             android:name=".zerocore.settings.MenuUpdateSourceActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
-        <activity android:name=".zerocore.ai.deepseek.activity.ZeroTermuxDeepSeekSettingsActivity"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.NoActionBar" />
 
         <activity android:name=".zerocore.ai.activity.MainAiSettings"
             android:exported="false"
@@ -159,15 +156,11 @@
             android:exported="false"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
 
+        <activity android:name=".zerocore.ai.agent.ZtModelGroupActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
+
         <activity android:name=".zerocore.ai.agent.ZtAgentAiSkillsActivity"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.NoActionBar" />
-
-        <activity android:name=".zerocore.llm.activity.ZeroTermuxLLMSettingsActivity"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.NoActionBar" />
-
-        <activity android:name=".zerocore.ai.deepseek.activity.ZeroTermuxDeepSeekKeyActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.NoActionBar" />
 

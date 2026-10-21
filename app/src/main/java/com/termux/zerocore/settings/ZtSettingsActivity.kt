@@ -6,7 +6,6 @@ import androidx.cardview.widget.CardView
 import com.example.xh_lib.utils.UUtils
 import com.termux.R
 import com.termux.app.activities.SettingsActivity
-import com.termux.zerocore.ai.activity.MainAiSettings
 import com.termux.zerocore.ai.agent.ZtAgentHubActivity
 class ZtSettingsActivity : BaseTitleActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -22,7 +21,7 @@ class ZtSettingsActivity : BaseTitleActivity() {
             startActivity(Intent(this, MenuSettingsActivity::class.java))
         }
         findViewById<CardView>(R.id.ai).setOnClickListener {
-            startActivity(Intent(this, MainAiSettings::class.java))
+            startActivity(Intent(this, ZtAgentHubActivity::class.java))
         }
         findViewById<CardView>(R.id.agent_ai_entry).setOnClickListener {
             startActivity(Intent(this, ZtAgentHubActivity::class.java))

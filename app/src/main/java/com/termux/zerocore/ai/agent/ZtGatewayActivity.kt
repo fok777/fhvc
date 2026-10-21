@@ -2,7 +2,6 @@ package com.termux.zerocore.ai.agent
 
 import android.content.Intent
 import android.graphics.Color
-import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
 import android.view.Gravity
@@ -58,6 +57,21 @@ class ZtGatewayActivity : BaseTitleActivity() {
             setPadding(0, dp(14), 0, 0)
         })
         root.addView(buildDirectList())
+        root.addView(TextView(this).apply {
+            text = "源码镜像（git clone 连不上时切换）"
+            textSize = 14f
+            setTextColor(Color.WHITE)
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(0, dp(14), 0, dp(4))
+        })
+        root.addView(TextView(this).apply {
+            text = "当前：${ZtGitMirror.currentLabel()}"
+            textSize = 13f
+            setTextColor(Color.WHITE)
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            setBackgroundColor(Color.parseColor("#55000000"))
+            setOnClickListener { showMirrorPicker(this) }
+        })
         root.addView(TextView(this).apply {
             text = "输出"
             textSize = 13f
@@ -258,10 +272,14 @@ class ZtGatewayActivity : BaseTitleActivity() {
             .show()
     }
 
+    /** 用内置 WebView 打开控制台，不再甩给外部浏览器。 */
     private fun openDash(gw: ZtLocalGateway) {
         runCatching {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(gw.dashUrl())))
-        }.onFailure { log("无法打开浏览器：${gw.dashUrl()}") }
+            val intent = Intent(this, com.termux.zerocore.activity.WebViewActivity::class.java)
+            intent.putExtra("title_visible", "gone")
+            intent.putExtra("content", gw.dashUrl())
+            startActivity(intent)
+        }.onFailure { log("无法打开控制台：${gw.dashUrl()}") }
     }
 
     /** 把当前 AI 配置指向这个网关。免密的会把 key 清空并打上标记。 */
@@ -315,13 +333,40 @@ class ZtGatewayActivity : BaseTitleActivity() {
     // ─── 免密直连 ────────────────────────────────────────────────────────────
 
     private val DIRECT_URLS = mapOf(
-        "direct-kilo" to "https://api.kilo.ai/api/gateway/v1",
+        "direct-zen" to "https://opencode.ai/zen/v1",
+        "direct-kilo" to "https://api.kilo.ai/api/gateway",
         "direct-vlmrun" to "https://gateway.vlm.run/v1/openai",
         "direct-ovh" to "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1"
     )
 
+    /** 免密端点的凭证是固定字面量，不需要用户输入。 */
+    private val DIRECT_KEYS = mapOf(
+        "direct-zen" to "public"
+    )
+
+    /** 装之前先测一次连通，省得白等几分钟才发现网络不通。 */
+    private fun testDirect(url: String, key: String?) {
+        thread {
+            val ok = runCatching {
+                val builder = okhttp3.Request.Builder()
+                    .url(url.trimEnd('/') + "/models")
+                    .get()
+                if (!key.isNullOrBlank()) {
+                    builder.addHeader("Authorization", "Bearer $key")
+                }
+                ZtGatewayManager.httpClient().newCall(builder.build()).execute().use { resp ->
+                    val body = resp.body?.string().orEmpty()
+                    val n = org.json.JSONObject(body).optJSONArray("data")?.length() ?: 0
+                    "HTTP ${resp.code} · $n 个模型"
+                }
+            }.getOrElse { "失败：${it.message?.take(60)}" }
+            log("测试 $url → $ok")
+        }
+    }
+
     private fun showDirectDetail(gw: ZtLocalGateway) {
         val url = DIRECT_URLS[gw.id] ?: return
+        val key = DIRECT_KEYS[gw.id]
         val modelEdit = EditText(this).apply {
             setText(gw.defaultModel)
             textSize = 13f
@@ -330,6 +375,7 @@ class ZtGatewayActivity : BaseTitleActivity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(8), dp(16), 0)
             addView(label("端点：\n$url", grey = true))
+            if (key != null) addView(label("凭证：$key（固定字面量，无需注册）", grey = true))
             addView(label("模型"))
             addView(modelEdit)
             addView(label(gw.notes, grey = true))
@@ -338,17 +384,31 @@ class ZtGatewayActivity : BaseTitleActivity() {
             .setTitle(gw.name)
             .setView(form)
             .setNegativeButton("关闭", null)
+            .setNeutralButton("测连通") { _, _ -> testDirect(url, key) }
             .setPositiveButton("接入") { _, _ ->
                 val current = ZtAgentAiConfigHelper.loadActiveConfig()
-                ZtAgentAiConfigHelper.saveKeyless(true)
+                ZtAgentAiConfigHelper.saveKeyless(key.isNullOrBlank())
                 ZtAgentAiConfigHelper.saveActiveFields(
                     url,
-                    "",
+                    key ?: "",
                     modelEdit.text.toString().trim(),
                     current.systemPrompt
                 )
-                log("已接入 $url（免密）")
+                log("已接入 $url（模型 ${modelEdit.text}）")
             }
+            .show()
+    }
+
+    private fun showMirrorPicker(view: TextView) {
+        val labels = ZtGitMirror.OPTIONS.map { it.first }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle("选择源码镜像")
+            .setItems(labels) { _, which ->
+                ZtGitMirror.saveIndex(which)
+                view.text = "当前：${ZtGitMirror.currentLabel()}"
+                log("镜像已切换为 ${ZtGitMirror.currentLabel()}")
+            }
+            .setNegativeButton("关闭", null)
             .show()
     }
 

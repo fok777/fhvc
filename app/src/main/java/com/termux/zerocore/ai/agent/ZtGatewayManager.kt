@@ -27,6 +27,9 @@ object ZtGatewayManager {
         .readTimeout(3, TimeUnit.SECONDS)
         .build()
 
+    /** 复用同一个客户端做连通性测试，超时已设短，不会长时间卡住。 */
+    fun httpClient(): OkHttpClient = http
+
     data class Status(
         val running: Boolean,
         val modelCount: Int = 0,
@@ -121,9 +124,12 @@ object ZtGatewayManager {
             onLine("该网关无需安装")
             return true
         }
+        val mirror = ZtGitMirror.current()
+        if (mirror.isNotEmpty()) onLine("使用镜像：$mirror")
         for ((label, command) in gateway.installSteps) {
             onLine("▶ $label")
-            val ok = runShell(cmd = "$command 2>&1", wait = true, onLine = onLine)
+            val resolved = command.replace("%MIRROR%", mirror)
+            val ok = runShell(cmd = "$resolved 2>&1", wait = true, onLine = onLine)
             if (!ok) {
                 onLine("✗ $label 失败（见上方输出）")
                 return false

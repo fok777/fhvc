@@ -2,7 +2,7 @@ package com.termux.zerocore.ai.agent
 
 import android.content.Context
 import android.graphics.Color
-import com.termux.zerocore.ai.deepseek.markdown.MarkDownAPI
+import com.termux.zerocore.ai.markdown.MarkDownAPI
 import io.noties.markwon.Markwon
 import io.noties.markwon.ext.tables.TablePlugin
 import io.noties.markwon.ext.tables.TableTheme
