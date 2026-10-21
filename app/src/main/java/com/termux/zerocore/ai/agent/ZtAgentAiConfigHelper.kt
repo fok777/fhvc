@@ -86,9 +86,41 @@ object ZtAgentAiConfigHelper {
         UserSetManage.get().setZTUserBean(bean)
     }
 
+    /**
+     * 把用户填的地址补齐成完整的 chat completions 端点。
+     *
+     * 很多人只填到 `https://host/v1` 就保存了，请求会打到一个不存在的路径上，
+     * 服务端回 `Invalid URL (POST /v1)`。这里按约定补全：
+     *   `https://host`      → `https://host/v1/chat/completions`
+     *   `https://host/v1`   → `https://host/v1/chat/completions`
+     *   `https://host/v1/`  → `https://host/v1/chat/completions`
+     * 已经带了具体路径（包括 /chat/completions、/responses、/messages 等）的一律不动，
+     * 免得把非 OpenAI 协议的端点改坏。
+     */
+    fun normalizeEndpointUrl(raw: String): String {
+        var url = raw.trim()
+        if (url.isEmpty()) return url
+        if (!url.startsWith("http://", true) && !url.startsWith("https://", true)) {
+            url = "https://$url"
+        }
+        url = url.trimEnd('/')
+        val path = url.substringAfter("://").substringAfter('/', "")
+        if (path.isEmpty()) {
+            return "$url/v1/chat/completions"
+        }
+        if (path.equals("v1", true) ||
+            path.equals("v2", true) ||
+            path.equals("v3", true) ||
+            path.matches(Regex("v\\d+(\\.\\d+)?", RegexOption.IGNORE_CASE))
+        ) {
+            return "$url/chat/completions"
+        }
+        return url
+    }
+
     fun saveActiveFields(apiUrl: String, apiKey: String, model: String, systemPrompt: String) {
         val bean = UserSetManage.get().getZTUserBean()
-        bean.agentAiApiUrl = apiUrl.trim()
+        bean.agentAiApiUrl = normalizeEndpointUrl(apiUrl)
         bean.agentAiApiKey = apiKey.trim()
         bean.agentAiModel = model.trim()
         bean.agentAiSystemPrompt = systemPrompt.trim()

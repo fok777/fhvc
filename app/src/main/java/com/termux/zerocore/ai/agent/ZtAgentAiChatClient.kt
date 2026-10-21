@@ -58,6 +58,9 @@ class ZtAgentAiChatClient(
      */
     private val profile: ZtEndpointProfile get() = ZtAgentAiConfigHelper.endpointProfile()
 
+    /** 老配置可能只存到 /v1，请求前兜底补全一次。 */
+    private fun endpointUrl(): String = ZtAgentAiConfigHelper.normalizeEndpointUrl(config.apiUrl)
+
     private fun limiter(): ZtRateLimiter {
         val p = profile
         val cached = limiterCache[p.id]
@@ -150,7 +153,7 @@ class ZtAgentAiChatClient(
         val bodyJson = buildRequestBody(messages, stream = false, tools = tools)
         val body = bodyJson.toRequestBody(JSON_MEDIA_TYPE)
         val request = Request.Builder()
-            .url(config.apiUrl.trim())
+            .url(endpointUrl())
             .addHeader("Authorization", "Bearer ${config.apiKey.trim()}")
             .addHeader("Content-Type", "application/json")
             .post(body)
@@ -221,7 +224,7 @@ class ZtAgentAiChatClient(
             val bodyJson = buildRequestBody(messages, stream, tools = null)
             val body = bodyJson.toRequestBody(JSON_MEDIA_TYPE)
             val request = Request.Builder()
-                .url(config.apiUrl.trim())
+                .url(endpointUrl())
                 .addHeader("Authorization", "Bearer ${config.apiKey.trim()}")
                 .addHeader("Content-Type", "application/json")
                 .post(body)

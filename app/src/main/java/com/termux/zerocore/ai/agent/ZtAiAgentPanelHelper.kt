@@ -1,6 +1,8 @@
 package com.termux.zerocore.ai.agent
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Rect
@@ -8,8 +10,11 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.text.TextUtils
+import android.view.ActionMode
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
@@ -21,6 +26,7 @@ import android.widget.LinearLayout
 import android.widget.RelativeLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.termux.R
@@ -255,10 +261,12 @@ class ZtAiAgentPanelHelper(
     private fun restoreConversationUi() {
         if (conversationHistory.isEmpty()) return
         showMessagesArea()
-        conversationHistory.forEach { message ->
+        conversationHistory.forEachIndexed { index, message ->
             when (message.role) {
-                ROLE_USER -> appendUserMessage(message.content.orEmpty(), persist = false)
-                ROLE_ASSISTANT -> appendAssistantMessage(message.content.orEmpty(), isError = false, persist = false)
+                ROLE_USER -> appendUserMessage(message.content.orEmpty(), persist = false, historyIndex = index)
+                ROLE_ASSISTANT -> appendAssistantMessage(
+                    message.content.orEmpty(), isError = false, persist = false, historyIndex = index
+                )
             }
         }
         scrollToBottom()
@@ -288,6 +296,11 @@ class ZtAiAgentPanelHelper(
             isError = false,
             persist = false
         )
+        startReply(assistantView)
+    }
+
+    /** 发一次请求。编辑重发、中途插入都复用这段。 */
+    private fun startReply(assistantView: TextView) {
         setSending(true)
         agentCancelled = false
         resetToolRoundProgress(
@@ -450,11 +463,13 @@ class ZtAiAgentPanelHelper(
         return list
     }
 
-    private fun appendUserMessage(text: String, persist: Boolean) {
+    private fun appendUserMessage(text: String, persist: Boolean, historyIndex: Int = -1) {
         showMessagesArea()
         val itemView = inflateMessageItem(isUser = true)
         val content = itemView.findViewById<TextView>(R.id.agent_message_content)
         renderMarkdown(content, text)
+        val index = if (historyIndex >= 0) historyIndex else conversationHistory.size
+        bindMessageActions(content, ROLE_USER, text, index)
         messagesContainer.addView(itemView)
         if (persist) {
             val snapshot = if (ZtAgentAiConfigHelper.isTerminalEnabled()) {
@@ -473,13 +488,22 @@ class ZtAiAgentPanelHelper(
         }
     }
 
-    private fun appendAssistantMessage(text: String, isError: Boolean, persist: Boolean): TextView {
+    private fun appendAssistantMessage(
+        text: String,
+        isError: Boolean,
+        persist: Boolean,
+        historyIndex: Int = -1
+    ): TextView {
         showMessagesArea()
         val itemView = inflateMessageItem(isUser = false)
         val content = itemView.findViewById<TextView>(R.id.agent_message_content)
         renderMarkdown(content, text)
         if (isError) {
             content.setBackgroundResource(R.drawable.shape_agent_msg_assistant)
+        }
+        if (!isError || persist) {
+            val index = if (historyIndex >= 0) historyIndex else conversationHistory.size
+            bindMessageActions(content, ROLE_ASSISTANT, text, index)
         }
         messagesContainer.addView(itemView)
         if (!persist) {
@@ -490,6 +514,91 @@ class ZtAiAgentPanelHelper(
             ZtAgentAiChatStore.save(conversationHistory)
         }
         return content
+    }
+
+    // ─── 消息操作（复制 / 删除 / 重新编辑 / 中途插入） ──────────────────────────
+
+    private fun bindMessageActions(content: TextView, role: String, text: String, index: Int) {
+        ZtMessageActions.attach(content, role, text, index, object : ZtMessageActions.Host {
+            override fun deleteMessageAt(index: Int) = doDeleteMessageAt(index)
+            override fun resendFrom(index: Int, newText: String) = doResendFrom(index, newText)
+            override fun insertAfter(index: Int, text: String) = doInsertAfter(index, text)
+        })
+    }
+
+    /** 历史变动后整体重绘，比逐个增删视图更难出错。 */
+    private fun rebuildMessagesUi() {
+        messagesContainer.removeAllViews()
+        pendingAssistantRow = null
+        conversationHistory.forEachIndexed { index, message ->
+            when (message.role) {
+                ROLE_USER -> appendUserMessage(
+                    message.content.orEmpty(), persist = false, historyIndex = index
+                )
+                ROLE_ASSISTANT -> appendAssistantMessage(
+                    message.content.orEmpty(), isError = false, persist = false, historyIndex = index
+                )
+            }
+        }
+        scrollToBottom()
+    }
+
+    private fun doDeleteMessageAt(index: Int) {
+        if (index !in conversationHistory.indices) return
+        val removed = conversationHistory.removeAt(index)
+        // 提问后面紧跟着它的回答，一起删掉，否则会留下一条没有提问的回复
+        if (removed.role == ROLE_USER &&
+            index < conversationHistory.size &&
+            conversationHistory[index].role == ROLE_ASSISTANT
+        ) {
+            conversationHistory.removeAt(index)
+        }
+        ZtAgentAiChatStore.save(conversationHistory)
+        rebuildMessagesUi()
+    }
+
+    private fun truncateFrom(index: Int) {
+        while (conversationHistory.size > index) {
+            conversationHistory.removeAt(conversationHistory.lastIndex)
+        }
+    }
+
+    private fun doResendFrom(index: Int, newText: String) {
+        if (isSending) return
+        truncateFrom(index)
+        conversationHistory.add(ZtAgentAiChatClient.ChatMessage(ROLE_USER, newText))
+        ZtAgentAiChatStore.save(conversationHistory)
+        rebuildMessagesUi()
+        sendLatest()
+    }
+
+    private fun doInsertAfter(index: Int, text: String) {
+        if (isSending) return
+        // 插入点之后的内容要截断：留着会出现「新提问在前、旧回答在后」的顺序错乱
+        truncateFrom(index + 1)
+        conversationHistory.add(ZtAgentAiChatClient.ChatMessage(ROLE_USER, text))
+        ZtAgentAiChatStore.save(conversationHistory)
+        rebuildMessagesUi()
+        sendLatest()
+    }
+
+    private fun sendLatest() {
+        if (!ZtAgentAiConfigHelper.isConfigured()) {
+            appendAssistantMessage(
+                panelCard.context.getString(R.string.zt_ai_agent_not_configured),
+                isError = true,
+                persist = false
+            )
+            scrollToBottom()
+            return
+        }
+        val assistantView = appendAssistantMessage(
+            panelCard.context.getString(R.string.zt_ai_agent_thinking),
+            isError = false,
+            persist = false
+        )
+        scrollToBottom()
+        startReply(assistantView)
     }
 
     private fun renderMarkdown(textView: TextView, markdown: String, scroll: Boolean = true) {
