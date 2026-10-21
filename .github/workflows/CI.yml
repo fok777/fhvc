@@ -1,11 +1,8 @@
 name: CI
 
+# 只在手动触发时跑：日常验证走 build-test（单架构、够快）。
+# 同步 main 不再自动构建，避免每次提交都跑满矩阵。
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - '.github/ISSUE_TEMPLATE/**'
-      - '**/README.md'
   workflow_dispatch:
 
 concurrency:
@@ -14,18 +11,19 @@ concurrency:
 
 jobs:
   build:
-    if: ${{ github.event_name != 'push' || !startsWith(github.event.head_commit.message, '[skip ci]') }}
     strategy:
       matrix:
-        arch: [universal, arm, arm64, x86, x86_64]
+        # 真机只会用到 universal 与 arm64；arm/x86/x86_64 覆盖的是
+        # 十年前的老设备和模拟器，对日常使用没有意义。
+        arch: [universal, arm64]
       fail-fast: false
     uses: ./.github/workflows/build.yml
     with:
       arch: ${{ matrix.arch }}
       build_debug: true
-      build_release: true
+      # 没配签名密钥时 Release 必然失败，纯白跑；配了才编。
+      build_release: ${{ vars.ENABLE_RELEASE_BUILD == 'true' }}
     secrets:
       KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
       KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
-
